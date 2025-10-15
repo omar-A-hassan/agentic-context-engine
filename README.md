@@ -18,6 +18,8 @@
 
 ### Install ACE:
 ```bash
+pip install ace-framework
+# or for development:
 pip install -r requirements.txt
 ```
 
@@ -250,7 +252,8 @@ ACE builds upon the adaptive memory concepts from Dynamic Cheatsheet:
 If you use this specific implementation, you can also reference:
 
 ```
-This repository: https://github.com/Kayba-ai/ace-framework
+This repository: https://github.com/Kayba-ai/agentic-context-engine
+PyPI package: https://pypi.org/project/ace-framework/
 Based on the open reproduction at: https://github.com/sci-m-wang/ACE-open
 ```
 

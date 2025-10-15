@@ -47,7 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: testpypi
-      url: https://test.pypi.org/project/ac-engine/
+      url: https://test.pypi.org/project/ace-framework/
     permissions:
       id-token: write
     steps:
@@ -71,7 +71,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/project/ac-engine/
+      url: https://pypi.org/project/ace-framework/
     permissions:
       id-token: write
     steps:

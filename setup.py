@@ -19,14 +19,14 @@ except FileNotFoundError:
     optional_requirements = []
 
 setup(
-    name="ac-engine",
+    name="ace-framework",
     version="0.1.0",
     author="Kayba.ai",
     author_email="hello@kayba.ai",
     description="Build self-improving AI agents that learn from experience",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/Kayba-ai/ace-framework",
+    url="https://github.com/Kayba-ai/agentic-context-engine",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 4 - Beta",
