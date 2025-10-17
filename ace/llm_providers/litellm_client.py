@@ -219,10 +219,11 @@ class LiteLLMClient(LLMClient):
             "max_tokens": kwargs.get("max_tokens", self.config.max_tokens),
             "timeout": kwargs.get("timeout", self.config.timeout),
             "num_retries": kwargs.get("num_retries", self.config.max_retries),
+            "drop_params": True,  # Automatically drop unsupported parameters
         }
 
-        # Only add top_p if not GPT-5 or Claude (they don't support it with temperature)
-        if "gpt-5" not in self.config.model.lower() and "claude" not in self.config.model.lower():
+        # Only add top_p if temperature is not set (for Anthropic compatibility)
+        if self.config.temperature == 0.0 and kwargs.get("temperature", 0.0) == 0.0:
             call_params["top_p"] = kwargs.get("top_p", self.config.top_p)
 
         # Force JSON response for models that support it
@@ -250,37 +251,10 @@ class LiteLLMClient(LLMClient):
             if self.router:
                 response = self.router.completion(**call_params)
             else:
-                # Add streaming for GPT-5 to see thinking process
-                if "gpt-5" in self.config.model.lower() and kwargs.get("stream_thinking", False):
-                    call_params["stream"] = True
-                    import sys
-                    full_text = ""
-                    response = completion(**call_params)
-                    for chunk in response:
-                        if chunk.choices[0].delta.content:
-                            content = chunk.choices[0].delta.content
-                            full_text += content
-                            sys.stderr.write(content)
-                            sys.stderr.flush()
-                    text = full_text
-                    sys.stderr.write("\n")
-                    # Create a mock response for metadata
-                    class MockResponse:
-                        model = call_params["model"]
-                        usage = None
-                    response = MockResponse()
-                else:
-                    response = completion(**call_params)
+                response = completion(**call_params)
 
-                    # Extract text from response
-                    text = response.choices[0].message.content
-
-                    # For GPT-5, check if content is empty but reasoning_content exists
-                    if "gpt-5" in self.config.model.lower() and not text:
-                        msg = response.choices[0].message
-                        if hasattr(msg, 'reasoning_content') and msg.reasoning_content:
-                            # GPT-5 sometimes returns empty content with only reasoning
-                            text = msg.reasoning_content
+            # Extract text from response
+            text = response.choices[0].message.content
 
             # Build metadata
             metadata = {
@@ -322,10 +296,11 @@ class LiteLLMClient(LLMClient):
             "max_tokens": kwargs.get("max_tokens", self.config.max_tokens),
             "timeout": kwargs.get("timeout", self.config.timeout),
             "num_retries": kwargs.get("num_retries", self.config.max_retries),
+            "drop_params": True,  # Automatically drop unsupported parameters
         }
 
-        # Only add top_p if not GPT-5 or Claude (they don't support it with temperature)
-        if "gpt-5" not in self.config.model.lower() and "claude" not in self.config.model.lower():
+        # Only add top_p if temperature is not set (for Anthropic compatibility)
+        if self.config.temperature == 0.0 and kwargs.get("temperature", 0.0) == 0.0:
             call_params["top_p"] = kwargs.get("top_p", self.config.top_p)
 
         # Force JSON response for models that support it
