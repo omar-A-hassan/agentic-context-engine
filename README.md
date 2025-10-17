@@ -227,13 +227,6 @@ If you use ACE in your research, please cite:
 @article{zhang2024ace,title={Agentic Context Engineering},author={Zhang et al.},journal={arXiv:2510.04618},year={2024}}
 ```
 
-<div align="center">
-
-
-**Star ⭐ this repo if you find it useful!** <br>
-**Built with ❤️ by [Kayba](https://kayba.ai) and the open-source community**
-
-</div>
 
 <div align="center" style="background-color: #f6f8fa; padding: 24px; border-top: 3px solid #d0d7de; margin-top: 40px;">
 
