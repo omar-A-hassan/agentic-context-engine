@@ -306,7 +306,7 @@ def main():
 
     # Save playbook
     playbook_path = Path("ace_domain_playbook.json")
-    adapter.playbook.to_file(str(playbook_path))
+    adapter.playbook.save_to_file(str(playbook_path))
     print(f"\n💾 Playbook saved to {playbook_path}")
 
 
