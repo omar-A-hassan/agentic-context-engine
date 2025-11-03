@@ -112,6 +112,7 @@ class AdapterBase:
         max_refinement_rounds: int = 1,
         reflection_window: int = 3,
         enable_observability: bool = True,
+        api_delay: float = 0.0,
     ) -> None:
         self.playbook = playbook or Playbook()
         self.generator = generator
@@ -119,6 +120,7 @@ class AdapterBase:
         self.curator = curator
         self.max_refinement_rounds = max_refinement_rounds
         self.reflection_window = reflection_window
+        self.api_delay = api_delay
         self._recent_reflections: List[str] = []
 
         # Observability integration
@@ -395,6 +397,11 @@ class OfflineAdapter(AdapterBase):
                     total_steps=total_steps,
                 )
                 results.append(result)
+
+                # Add delay between API calls to avoid rate limits
+                if self.api_delay > 0:
+                    import time
+                    time.sleep(self.api_delay)
         return results
 
 

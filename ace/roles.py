@@ -26,8 +26,20 @@ except ImportError:
 
 
 def _safe_json_loads(text: str) -> Dict[str, Any]:
+    # Clean up markdown code fences that LLMs often add
+    cleaned_text = text.strip()
+
+    # Remove markdown code fences (```json ... ``` or ``` ... ```)
+    if cleaned_text.startswith("```json"):
+        cleaned_text = cleaned_text[7:].strip()
+    elif cleaned_text.startswith("```"):
+        cleaned_text = cleaned_text[3:].strip()
+
+    if cleaned_text.endswith("```"):
+        cleaned_text = cleaned_text[:-3].strip()
+
     try:
-        data = json.loads(text)
+        data = json.loads(cleaned_text)
     except json.JSONDecodeError as exc:
         debug_path = Path("logs/json_failures.log")
         debug_path.parent.mkdir(parents=True, exist_ok=True)

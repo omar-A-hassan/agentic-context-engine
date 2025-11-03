@@ -169,3 +169,166 @@ class TransformersLLMClient(LLMClient):
                     pass
 
         return trimmed.replace("\r", " ").replace("\n", " ")
+
+
+class MLXLLMClient(LLMClient):
+    """
+    LLM client powered by MLX for Apple Silicon optimization.
+
+    MLX provides 5-10x faster inference on M-series chips compared to PyTorch.
+    Ideal for local training on MacBooks with Apple Silicon.
+
+    Args:
+        model_path: Path to MLX-converted model or HuggingFace model ID
+        max_tokens: Maximum tokens to generate (default: 256)
+        temperature: Sampling temperature (default: 0.3)
+        top_p: Nucleus sampling parameter (default: 0.9)
+        system_prompt: System prompt for chat-style models
+
+    Example:
+        >>> from ace.llm import MLXLLMClient
+        >>> client = MLXLLMClient(
+        ...     model_path="mlx-community/gemma-3-270m-f16",
+        ...     max_tokens=256,
+        ...     temperature=0.3
+        ... )
+        >>> response = client.complete("What is 2+2?")
+        >>> print(response.text)
+    """
+
+    def __init__(
+        self,
+        model_path: str,
+        *,
+        max_tokens: int = 256,
+        temperature: float = 0.3,
+        top_p: float = 0.9,
+        system_prompt: Optional[str] = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(model=model_path)
+
+        # Import MLX lazily to avoid mandatory dependency
+        try:
+            from mlx_lm import load, generate
+            self._mlx_generate = generate
+        except ImportError:
+            raise ImportError(
+                "MLX-LM is not installed. Install with: pip install mlx-lm"
+            )
+
+        # Load model and tokenizer
+        self.model, self.tokenizer = load(model_path)
+
+        self._system_prompt = system_prompt or (
+            "You MUST respond with ONLY a valid JSON object. "
+            "NO text before or after the JSON. "
+            "NO markdown. NO explanations. ONLY JSON.\n"
+            "Example: {\"key\": \"value\"}"
+        )
+
+        self._defaults: Dict[str, Any] = {
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "top_p": top_p,
+        }
+
+        # Store any additional generation kwargs
+        self._defaults.update(kwargs)
+
+    def complete(self, prompt: str, **kwargs: Any) -> LLMResponse:
+        """
+        Generate completion using MLX.
+
+        Args:
+            prompt: Input prompt text
+            **kwargs: Override default generation parameters
+
+        Returns:
+            LLMResponse containing generated text
+        """
+        # Build chat-formatted prompt with system message
+        # For Gemma, use explicit instruction formatting
+        full_prompt = (
+            f"{self._system_prompt}\n\n"
+            f"{prompt}\n\n"
+            f"REMEMBER: Respond with ONLY valid JSON, nothing else.\n"
+            f"JSON response:"
+        )
+
+        # MLX-LM only accepts max_tokens, not temperature/top_p directly
+        # Temperature/top_p require custom samplers
+        max_tokens = kwargs.get("max_tokens", self._defaults.get("max_tokens", 256))
+
+        # Generate with MLX (only pass supported parameters)
+        response_text = self._mlx_generate(
+            model=self.model,
+            tokenizer=self.tokenizer,
+            prompt=full_prompt,
+            max_tokens=max_tokens,
+            verbose=False,  # Disable MLX logging
+        )
+
+        # Clean up response
+        text = self._postprocess_text(response_text)
+
+        return LLMResponse(text=text, raw={"prompt": full_prompt})
+
+    def _postprocess_text(self, text: str) -> str:
+        """Clean up MLX-generated text to extract JSON - robust for small models."""
+        trimmed = text.strip()
+
+        # Remove common prefixes
+        if trimmed.startswith("Assistant:"):
+            trimmed = trimmed[10:].strip()
+        if trimmed.startswith("JSON response:"):
+            trimmed = trimmed[14:].strip()
+
+        # Remove ALL markdown code fences (small models repeat them)
+        while trimmed.startswith("```json") or trimmed.startswith("```"):
+            if trimmed.startswith("```json"):
+                trimmed = trimmed[7:].strip()
+            elif trimmed.startswith("```"):
+                trimmed = trimmed[3:].strip()
+
+        while trimmed.endswith("```"):
+            trimmed = trimmed[:-3].strip()
+
+        # Extract FIRST valid JSON object - critical for models that repeat output
+        if "{" in trimmed:
+            start = trimmed.find("{")
+
+            # Try to find the FIRST complete, valid JSON object
+            brace_count = 0
+            for i in range(start, len(trimmed)):
+                if trimmed[i] == "{":
+                    brace_count += 1
+                elif trimmed[i] == "}":
+                    brace_count -= 1
+                    if brace_count == 0:
+                        # Found a complete object, try to parse it
+                        candidate = trimmed[start:i+1]
+                        try:
+                            # Validate JSON is complete and parseable
+                            parsed = json.loads(candidate)
+                            # Check it has the expected structure
+                            if isinstance(parsed, dict):
+                                return candidate
+                        except json.JSONDecodeError:
+                            # This object is malformed, continue searching
+                            continue
+
+        # Fallback: If model responded with plain text (common with small models),
+        # wrap it in minimal JSON structure
+        if not trimmed.startswith("{"):
+            # Model likely gave plain text answer - wrap it
+            escaped_text = trimmed.replace('"', '\\"').replace('\n', ' ')[:200]
+            fallback_json = json.dumps({
+                "reasoning": "Модель ответила без JSON форматирования",
+                "bullet_ids": [],
+                "final_answer": escaped_text
+            }, ensure_ascii=False)
+            return fallback_json
+
+        # Last resort: try to salvage by truncating at first valid close
+        return trimmed
