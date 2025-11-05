@@ -286,6 +286,7 @@ class AdapterBase:
             context=sample.context,
             playbook=self.playbook,
             reflection=self._reflection_context(),
+            sample=sample,  # Pass sample for ReplayGenerator support
         )
         env_result = environment.evaluate(sample, generator_output)
         reflection = self.reflector.reflect(
