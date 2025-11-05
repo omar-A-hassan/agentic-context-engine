@@ -87,6 +87,42 @@ class TaskEnvironment(ABC):
         """
 
 
+class SimpleEnvironment(TaskEnvironment):
+    """
+    Simple built-in environment for quick testing and demos.
+
+    Checks if the ground truth appears in the answer (case-insensitive).
+    Perfect for getting started without creating a custom environment.
+
+    Example:
+        >>> from ace import SimpleEnvironment, Sample
+        >>> env = SimpleEnvironment()
+        >>> sample = Sample(question="What is 2+2?", ground_truth="4")
+        >>> result = env.evaluate(sample, generator_output)
+    """
+
+    def evaluate(
+        self, sample: Sample, generator_output: GeneratorOutput
+    ) -> EnvironmentResult:
+        """Check if ground truth appears in the answer."""
+        if not sample.ground_truth:
+            return EnvironmentResult(
+                feedback="No ground truth provided",
+                ground_truth=None,
+                metrics={"correct": 0.0}
+            )
+
+        answer = generator_output.final_answer.lower()
+        truth = sample.ground_truth.lower()
+        is_correct = truth in answer
+
+        return EnvironmentResult(
+            feedback="Correct!" if is_correct else f"Incorrect. Expected: {sample.ground_truth}",
+            ground_truth=sample.ground_truth,
+            metrics={"correct": 1.0 if is_correct else 0.0}
+        )
+
+
 @dataclass
 class AdapterStepResult:
     sample: Sample

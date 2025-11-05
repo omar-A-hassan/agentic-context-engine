@@ -17,6 +17,7 @@ from .adaptation import (
     OnlineAdapter,
     Sample,
     TaskEnvironment,
+    SimpleEnvironment,
     EnvironmentResult,
     AdapterStepResult,
 )
@@ -68,6 +69,7 @@ __all__ = [
     "OnlineAdapter",
     "Sample",
     "TaskEnvironment",
+    "SimpleEnvironment",
     "EnvironmentResult",
     "AdapterStepResult",
     "OpikIntegration",

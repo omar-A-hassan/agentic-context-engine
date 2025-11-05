@@ -41,63 +41,60 @@ export OPENAI_API_KEY="your-api-key"
 ### 3. Create Your First ACE Agent
 
 ```python
-from ace import (
-    LiteLLMClient,
-    Generator, Reflector, Curator,
-    OfflineAdapter, Playbook,
-    Sample, TaskEnvironment, EnvironmentResult
-)
+from ace import LiteLLMClient, Generator, Playbook, Sample
 
-# 1. Create a simple environment for feedback
-class SimpleEnvironment(TaskEnvironment):
-    def evaluate(self, sample, generator_output):
-        # Check if the answer contains the expected content
-        is_correct = sample.ground_truth.lower() in generator_output.final_answer.lower()
-        return EnvironmentResult(
-            feedback="Correct!" if is_correct else "Incorrect answer",
-            ground_truth=sample.ground_truth
-        )
+# Initialize with any LLM
+llm = LiteLLMClient(model="gpt-4o-mini")
+generator = Generator(llm)
 
-# 2. Initialize ACE components with any LLM
-client = LiteLLMClient(model="gpt-4o-mini")  # Or claude-3-haiku, gemini-pro, etc.
-generator = Generator(client)
-reflector = Reflector(client)
-curator = Curator(client)
-playbook = Playbook()
-
-# 3. Create training samples
-training_samples = [
-    Sample(question="What is 2+2?", ground_truth="4"),
-    Sample(question="Capital of France?", ground_truth="Paris"),
-    Sample(question="What color is the sky?", ground_truth="blue"),
-]
-
-# 4. Train the agent (it learns from these examples)
-adapter = OfflineAdapter(generator=generator, reflector=reflector,
-                        curator=curator, playbook=playbook)
-environment = SimpleEnvironment()
-results = adapter.run(training_samples, environment, epochs=1)
-
-print(f"✅ Trained on {len(results)} samples")
-print(f"📚 Learned {len(adapter.playbook.bullets())} strategies")
-
-# 5. Save the learned strategies
-adapter.playbook.save_to_file("my_agent.json")
-
-# 6. Use the trained agent on new problems
+# Use it like a normal LLM (no learning yet)
 result = generator.generate(
-    question="What is 5+3?",
-    context="Provide direct answer",
-    playbook=adapter.playbook
+    question="What is 2+2?",
+    context="Be direct"
 )
-print(f"\n🤖 Answer: {result.final_answer}")
-
-# 7. Load and reuse later
-trained_playbook = Playbook.load_from_file("my_agent.json")
-# Now use trained_playbook with any new problems!
+print(f"Answer: {result.final_answer}")
 ```
 
-That's it! Your agent is now learning and improving. 🎉
+That's it! Now let's make it **learn and improve**:
+
+```python
+from ace import OfflineAdapter, Reflector, Curator, SimpleEnvironment
+
+# Create ACE learning system
+playbook = Playbook()
+adapter = OfflineAdapter(
+    playbook=playbook,
+    generator=generator,
+    reflector=Reflector(llm),
+    curator=Curator(llm)
+)
+
+# Teach it from examples (it learns patterns)
+samples = [
+    Sample(question="What is 2+2?", ground_truth="4"),
+    Sample(question="Capital of France?", ground_truth="Paris"),
+]
+
+results = adapter.run(samples, SimpleEnvironment(), epochs=1)
+print(f"✅ Learned {len(playbook.bullets())} strategies!")
+
+# Now use the improved agent
+result = generator.generate(
+    question="What is 5+3?",
+    playbook=playbook  # ← Uses learned strategies
+)
+print(f"🧠 Smarter answer: {result.final_answer}")
+
+# Save and reuse later
+playbook.save_to_file("my_agent.json")
+```
+
+🎉 **Your agent just got smarter!** It learned from examples and improved.
+
+**Want more?** Check out:
+- 📘 [Full example with custom environment](examples/simple_ace_example.py)
+- 🌊 [Seahorse emoji challenge demo](examples/kayba_ace_test.py)
+- 📚 [Complete guide to ACE](docs/COMPLETE_GUIDE_TO_ACE.md)
 
 ---
 
