@@ -5,6 +5,7 @@ on:
     branches: [ main, develop, lanzelot-dev ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:  # Allow manual triggering
 
 jobs:
   test:
