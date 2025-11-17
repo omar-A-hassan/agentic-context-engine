@@ -54,6 +54,22 @@ else:
     LiteLLMClient: Optional[type] = None  # type: ignore
     LITELLM_AVAILABLE = False
 
+# Import browser-use integration if available
+try:
+    from .browser_use_integration import (
+        ACEAgent as _ACEAgent,
+        wrap_playbook_context as _wrap_playbook_context,
+        BROWSER_USE_AVAILABLE as _BROWSER_USE_AVAILABLE,
+    )
+
+    ACEAgent: Optional[type] = _ACEAgent
+    wrap_playbook_context: Optional[type] = _wrap_playbook_context  # type: ignore
+    BROWSER_USE_AVAILABLE = _BROWSER_USE_AVAILABLE
+except ImportError:
+    ACEAgent: Optional[type] = None  # type: ignore
+    wrap_playbook_context: Optional[type] = None  # type: ignore
+    BROWSER_USE_AVAILABLE = False
+
 __all__ = [
     "Bullet",
     "Playbook",
@@ -80,4 +96,7 @@ __all__ = [
     "OpikIntegration",
     "LITELLM_AVAILABLE",
     "OBSERVABILITY_AVAILABLE",
+    "ACEAgent",
+    "wrap_playbook_context",
+    "BROWSER_USE_AVAILABLE",
 ]

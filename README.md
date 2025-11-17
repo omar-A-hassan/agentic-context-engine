@@ -93,6 +93,48 @@ playbook.save_to_file("my_agent.json")
 
 ---
 
+## 🌐 Browser Automation with ACE
+
+ACE integrates seamlessly with [browser-use](https://github.com/browser-use/browser-use) for self-improving browser agents:
+
+```bash
+pip install ace-framework[browser-use]
+```
+
+```python
+from ace import ACEAgent
+from browser_use import ChatBrowserUse
+import asyncio
+
+async def main():
+    # Drop-in replacement for browser-use Agent
+    # Two LLMs: ChatBrowserUse for browser execution, gpt-4o-mini for ACE learning
+    agent = ACEAgent(
+        llm=ChatBrowserUse(),      # Browser execution
+        ace_model="gpt-4o-mini"    # ACE learning (Reflector/Curator)
+    )
+
+    # Runs and learns automatically
+    await agent.run(task="Find top Hacker News post")
+    await agent.run(task="Find second HN post")  # Smarter!
+
+    # Save learned knowledge
+    agent.save_playbook("hn_expert.json")
+
+asyncio.run(main())
+```
+
+**Key Features:**
+- ✅ Drop-in replacement for `browser_use.Agent`
+- ✅ Automatic learning from browser executions
+- ✅ Reusable playbooks across sessions
+- ✅ Toggle learning on/off with `is_learning` flag
+- ✅ Works with all browser-use LLMs (ChatOpenAI, ChatBrowserUse, etc.)
+
+See [simple_ace_agent.py](examples/browser-use/simple_ace_agent.py) for a complete example.
+
+---
+
 ## Why Agentic Context Engine (ACE)?
 
 AI agents make the same mistakes repeatedly.

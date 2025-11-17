@@ -47,6 +47,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+browser-use = [
+    "browser-use>=0.9.0",
+]
 observability = [
     "opik>=1.8.0",
 ]
@@ -60,6 +63,7 @@ transformers = [
     "accelerate>=0.20.0",
 ]
 all = [
+    "browser-use>=0.9.0",
     "opik>=1.8.0",
     "langchain-openai>=0.3.35",
     "langchain-litellm>=0.2.0",
