@@ -78,6 +78,7 @@ Issues = "https://github.com/Kayba-ai/agentic-context-engine/issues"
 dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
     "black>=23.0.0",
     "mypy>=1.0.0",
     "pre-commit>=3.0.0",
@@ -124,4 +125,24 @@ exclude = [
     "^examples/",
     "^scripts/",
     "^benchmarks/",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+    "--cov=ace",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-fail-under=25",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
 ]
