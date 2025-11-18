@@ -33,6 +33,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Test coverage improved from 28% to 70%
 
 ### Fixed
+- **Browser-use trace integration** - Reflector now receives complete execution traces
+  - Fixed initial query duplication (task appeared in both question and reasoning)
+  - Fixed missing trace data (reasoning field now contains 2200+ chars vs 154 chars)
+  - Fixed screenshot attribute bug causing AttributeError on step.state.screenshot
+  - Added comprehensive regression test to catch these issues
+  - Impact: Reflector can now properly analyze browser agent's thought process
+  - Test coverage improved: 69% → 79% for browser_use.py
 - Prompt v2.1 test assertions updated to match current format
 - All 206 tests now pass (was 189)
 
