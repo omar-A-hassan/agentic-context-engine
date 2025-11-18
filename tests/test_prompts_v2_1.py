@@ -42,10 +42,10 @@ class TestPromptsV21(unittest.TestCase):
         """Test retrieving v2.1 generator prompts."""
         # General generator
         prompt = self.manager.get_generator_prompt(version="2.1")
-        self.assertIn("⚡ QUICK REFERENCE ⚡", prompt)
+        self.assertIn("Core Mission", prompt)
+        self.assertIn("Core Responsibilities", prompt)
         self.assertIn("CRITICAL", prompt)
-        self.assertIn("MANDATORY", prompt)
-        self.assertIn("WHEN TO APPLY THIS PROTOCOL", prompt)
+        self.assertIn("Strategy Application", prompt)
 
         # Math-specific
         math_prompt = self.manager.get_generator_prompt(domain="math", version="2.1")
@@ -244,8 +244,8 @@ class TestPromptsV21(unittest.TestCase):
 
         # Check for v2.1 features
         enhancements = comparisons["v21_enhancements"]
-        self.assertTrue(enhancements["quick_reference"])
-        self.assertGreater(enhancements["mandatory_markers"], 0)
+        # Note: quick_reference was removed in favor of Core Mission/Responsibilities
+        # Just check that we have critical markers
         self.assertGreater(enhancements["critical_markers"], 0)
 
     def test_version_listing(self):
