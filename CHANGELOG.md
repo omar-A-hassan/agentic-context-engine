@@ -16,21 +16,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Details**: Uses tab delimiters and excludes internal metadata (created_at, updated_at)
 
 ### Added
+- **ACELiteLLM integration** - Simple conversational agent with automatic learning
+- **ACELangChain integration** - Wrap LangChain Runnables with ACE learning
+- **Integration exports** - Import ACEAgent, ACELiteLLM, ACELangChain from `ace` package root
 - **TOON compression for playbooks** - 16-62% token reduction vs markdown
-  - Tab-delimited format for maximum compression efficiency
-  - Automatic filtering of LLM-irrelevant fields (created_at, updated_at)
-  - `_as_markdown_debug()` method for human-readable debugging
-  - `python-toon>=0.1.0` now a required dependency
-- Citation-based strategy tracking - strategies cited inline in reasoning with `[section-00001]` format
-- Enhanced browser trace feedback - Reflector now receives detailed execution logs (thoughts, actions, results, URLs, errors)
-- Comprehensive test coverage for core LLM interfaces (17 new tests)
-- `extract_cited_bullet_ids()` utility for parsing strategy citations from text
+- **Citation-based tracking** - Strategies cited inline as `[section-00001]`, auto-extracted from reasoning
+- **Enhanced browser traces** - Full execution logs (2200+ chars) passed to Reflector
+- **Test coverage** - Improved from 28% to 70% (241 tests total)
 
 ### Changed
-- `Playbook.__str__()` now uses markdown format for readability (not TOON)
-- Generator no longer requires `bullet_ids` in JSON output - extracted from reasoning automatically
-- ACEAgent passes full browser execution trace to Reflector for improved learning
-- Test coverage improved from 28% to 70%
+- **Documentation cleanup** - Removed 10,000+ lines of internal artifacts, consolidated guides
+- **Examples reorganization** - Logical folders (prompts/, litellm/, starter-templates/)
+- **Renamed SimpleAgent → ACELiteLLM** - Moved to `ace/integrations/`
+- `Playbook.__str__()` returns markdown (TOON reserved for LLM consumption via `as_prompt()`)
 
 ### Fixed
 - **Browser-use trace integration** - Reflector now receives complete execution traces
