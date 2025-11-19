@@ -1,11 +1,6 @@
-# 🚀 ACE Framework Quick Start Guide
+# 🚀 ACE Framework Quick Start
 
-Get your first self-improving AI agent running in 5 minutes!
-
-## Prerequisites
-
-- Python 3.11 or higher
-- An API key for your preferred LLM provider (OpenAI, Anthropic, etc.)
+Get your first self-learning AI agent running in 5 minutes!
 
 ## Installation
 
@@ -15,106 +10,67 @@ pip install ace-framework
 
 ## Your First ACE Agent
 
-### Step 1: Set up your environment
-
-Create a `.env` file with your API key:
+### Step 1: Set API Key
 
 ```bash
-# For OpenAI
-OPENAI_API_KEY=your-key-here
-
-# For Anthropic
-ANTHROPIC_API_KEY=your-key-here
-
-# For Google
-GOOGLE_API_KEY=your-key-here
+export OPENAI_API_KEY="your-key-here"
+# Or: ANTHROPIC_API_KEY, GOOGLE_API_KEY, etc.
 ```
 
-### Step 2: Create a simple agent
-
-Create a file `my_first_ace.py`:
+### Step 2: Create `my_first_ace.py`
 
 ```python
-from ace import OfflineAdapter, Generator, Reflector, Curator, Playbook
+from ace import OfflineAdapter, Generator, Reflector, Curator
 from ace import LiteLLMClient, Sample, TaskEnvironment, EnvironmentResult
 
 
-# Create a simple environment for evaluating answers
+# Simple environment that checks if answer contains the ground truth
 class SimpleEnvironment(TaskEnvironment):
-    """Basic environment for testing - checks if ground truth appears in answer."""
-
     def evaluate(self, sample, generator_output):
-        # Simple substring matching (case-insensitive)
         correct = str(sample.ground_truth).lower() in str(generator_output.final_answer).lower()
-
         return EnvironmentResult(
             feedback="Correct!" if correct else "Incorrect",
-            ground_truth=sample.ground_truth,
+            ground_truth=sample.ground_truth
         )
 
 
-# Initialize the LLM client
-client = LiteLLMClient(model="gpt-4o-mini")  # or claude-3-haiku, gemini-pro, etc.
+# Initialize LLM client
+client = LiteLLMClient(model="gpt-4o-mini")
 
-# Create the three ACE components
+# Create ACE components
 generator = Generator(client)
 reflector = Reflector(client)
 curator = Curator(client)
 
-# Create an adapter to orchestrate everything
-adapter = OfflineAdapter(
-    generator=generator,
-    reflector=reflector,
-    curator=curator
-)
-
-# Set up the environment (evaluates answers)
-environment = SimpleEnvironment()
+# Create adapter to orchestrate everything
+adapter = OfflineAdapter(generator=generator, reflector=reflector, curator=curator)
 
 # Create training samples
 samples = [
-    Sample(
-        question="What is the capital of France?",
-        context="Provide a direct answer",
-        ground_truth="Paris"
-    ),
-    Sample(
-        question="What is 2 + 2?",
-        context="Show the calculation",
-        ground_truth="4"
-    ),
-    Sample(
-        question="Who wrote Romeo and Juliet?",
-        context="Name the author",
-        ground_truth="William Shakespeare"
-    )
+    Sample(question="What is the capital of France?", context="", ground_truth="Paris"),
+    Sample(question="What is 2 + 2?", context="", ground_truth="4"),
+    Sample(question="Who wrote Romeo and Juliet?", context="", ground_truth="Shakespeare")
 ]
 
-# Train the agent (it learns strategies from these examples)
+# Train the agent
 print("Training agent...")
-results = adapter.run(samples, environment, epochs=2)
+results = adapter.run(samples, SimpleEnvironment(), epochs=2)
 
-# Save the learned strategies
-adapter.playbook.save_to_file("my_trained_agent.json")
-print(f"Agent trained! Learned {len(adapter.playbook.bullets())} strategies")
+# Save learned strategies
+adapter.playbook.save_to_file("my_agent.json")
+print(f"✅ Agent trained! Learned {len(adapter.playbook.bullets())} strategies")
 
-# Test with a new question
-test_sample = Sample(
+# Test with new question
+test_output = generator.generate(
     question="What is 5 + 3?",
-    context="Provide the answer"
-)
-
-print("\nTesting with new question:", test_sample.question)
-output = generator.generate(
-    question=test_sample.question,
-    context=test_sample.context,
+    context="",
     playbook=adapter.playbook
 )
-print("Answer:", output.final_answer)
-print("Reasoning:", output.reasoning)
+print(f"\nTest question: What is 5 + 3?")
+print(f"Answer: {test_output.final_answer}")
 ```
 
-### Step 3: Run your agent
+### Step 3: Run It
 
 ```bash
 python my_first_ace.py
@@ -123,41 +79,45 @@ python my_first_ace.py
 Expected output:
 ```
 Training agent...
-Agent trained! Learned 3 strategies
+✅ Agent trained! Learned 3 strategies
 
-Testing with new question: What is 5 + 3?
+Test question: What is 5 + 3?
 Answer: 8
-Reasoning: Using direct calculation strategy learned from training...
 ```
+
+---
 
 ## What Just Happened?
 
 Your agent:
-1. **Learned** from the training examples
+1. **Learned** from training examples
 2. **Reflected** on what strategies work
 3. **Built a playbook** of successful approaches
-4. **Applied** those strategies to solve a new problem
+4. **Applied** strategies to solve a new problem
+
+---
 
 ## Next Steps
 
-### 1. Load and Continue Training
+### Load Saved Agent
 
 ```python
 from ace import Playbook
 
-# Load a previously trained agent
-playbook = Playbook.load_from_file("my_trained_agent.json")
+# Load previously trained agent
+playbook = Playbook.load_from_file("my_agent.json")
 
-# Continue training with new examples
-adapter = OfflineAdapter(generator, reflector, curator, playbook=playbook)
+# Use it
+output = generator.generate(
+    question="New question",
+    context="",
+    playbook=playbook
+)
 ```
 
-### 2. Try Different Models
+### Try Different Models
 
 ```python
-# OpenAI GPT-4
-client = LiteLLMClient(model="gpt-4")
-
 # Anthropic Claude
 client = LiteLLMClient(model="claude-3-5-sonnet-20241022")
 
@@ -168,129 +128,80 @@ client = LiteLLMClient(model="gemini-pro")
 client = LiteLLMClient(model="ollama/llama2")
 ```
 
-### 3. Online Learning (Learn While Running)
+### Add ACE to Existing Agents
+
+Already have an agent? Wrap it with ACE learning:
+
+```python
+from ace.integrations import ACEAgent  # For browser-use
+from ace.integrations import ACELangChain  # For LangChain
+
+# See Integration Guide for details
+```
+
+---
+
+## Learn More
+
+- **[Integration Guide](INTEGRATION_GUIDE.md)** - Add ACE to existing agents
+- **[Complete Guide](COMPLETE_GUIDE_TO_ACE.md)** - Deep dive into ACE concepts
+- **[Examples](../examples/)** - Real-world examples
+  - [Browser Automation](../examples/browser-use/) - Self-improving browser agents
+  - [LangChain Integration](../examples/langchain/) - Wrap chains with learning
+  - [Custom Integration](../examples/custom_integration_example.py) - Any agent pattern
+
+---
+
+## Common Patterns
+
+### Online Learning (Learn While Running)
 
 ```python
 from ace import OnlineAdapter
 
-adapter = OnlineAdapter(
-    playbook=playbook,
-    generator=generator,
-    reflector=reflector,
-    curator=curator
-)
+adapter = OnlineAdapter(playbook, generator, reflector, curator)
 
 # Process tasks one by one, learning from each
 for task in tasks:
     result = adapter.process(task, environment)
-    print(f"Processed: {task.question}")
-    print(f"Playbook now has {len(adapter.playbook.bullets())} strategies")
 ```
 
-### 4. Custom Environments
+### Custom Evaluation
 
 ```python
-from ace import TaskEnvironment, EnvironmentResult
-
 class MathEnvironment(TaskEnvironment):
     def evaluate(self, sample, output):
         try:
-            # Evaluate mathematical correctness
             result = eval(output.final_answer)
-            correct = (result == eval(sample.ground_truth))
-
+            correct = result == sample.ground_truth
             return EnvironmentResult(
-                feedback="Correct!" if correct else "Incorrect",
-                ground_truth=sample.ground_truth,
-                metrics={"accuracy": 1.0 if correct else 0.0}
+                feedback=f"Result: {result}. {'✓' if correct else '✗'}",
+                ground_truth=sample.ground_truth
             )
         except:
             return EnvironmentResult(
-                feedback="Invalid mathematical expression",
-                ground_truth=sample.ground_truth,
-                metrics={"accuracy": 0.0}
+                feedback="Invalid math expression",
+                ground_truth=sample.ground_truth
             )
 ```
 
-## Common Patterns
-
-### Math Problem Solver
-
-```python
-math_samples = [
-    Sample("What is 10 * 5?", "Calculate", "50"),
-    Sample("What is 100 / 4?", "Calculate", "25"),
-    Sample("What is 7 + 8?", "Calculate", "15"),
-]
-```
-
-### Code Generator
-
-```python
-code_samples = [
-    Sample(
-        "Write a Python function to add two numbers",
-        "Include type hints",
-        "def add(a: int, b: int) -> int:\n    return a + b"
-    ),
-]
-```
-
-### Q&A System
-
-```python
-qa_samples = [
-    Sample(
-        "What is machine learning?",
-        "Explain in simple terms",
-        "Machine learning is a type of AI that allows computers to learn from data without being explicitly programmed."
-    ),
-]
-```
+---
 
 ## Troubleshooting
 
-### API Key Issues
-
-If you get authentication errors:
-```python
-import os
-os.environ["OPENAI_API_KEY"] = "your-key-here"
+**Import errors?**
+```bash
+pip install --upgrade ace-framework
 ```
 
-### Rate Limiting
+**API key not working?**
+- Verify key is correct: `echo $OPENAI_API_KEY`
+- Try different model: `LiteLLMClient(model="gpt-3.5-turbo")`
 
-Add delays between calls:
-```python
-import time
-
-for sample in samples:
-    result = adapter.process(sample, environment)
-    time.sleep(1)  # Wait 1 second between calls
-```
-
-### Memory Issues
-
-Use online learning for large datasets:
-```python
-# Instead of loading all samples at once
-adapter = OnlineAdapter(...)
-for sample in large_dataset:
-    adapter.process(sample, environment)
-```
-
-## Learn More
-
-- [API Reference](API_REFERENCE.md) - Complete documentation
-- [Examples](../examples/) - More complex examples
-- [Setup Guide](SETUP_GUIDE.md) - Detailed configuration
-- [Testing Guide](TESTING_GUIDE.md) - Best practices
-
-## Get Help
-
-- [GitHub Issues](https://github.com/Kayba-ai/agentic-context-engine/issues)
-- [Discord Community](#) - Coming soon!
+**Need help?**
+- [GitHub Issues](https://github.com/kayba-ai/agentic-context-engine/issues)
+- [Discord Community](https://discord.com/invite/mqCqH7sTyK)
 
 ---
 
-**Ready for more?** Check out the [full documentation](API_REFERENCE.md) or explore [advanced examples](../examples/).
+**Ready to build production agents?** Check out the [Integration Guide](INTEGRATION_GUIDE.md) for browser automation, LangChain, and custom agent patterns.

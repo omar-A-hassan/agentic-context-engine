@@ -108,7 +108,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Example demonstrating playbook save/load functionality (`examples/playbook_persistence.py`)
 - py.typed file for PEP 561 type hint support
 - Mermaid flowchart visualization in README showing ACE learning loop
-- ACE_ROADMAP.md (untracked) for development planning
 
 ### Changed
 - Enhanced docstrings with comprehensive examples throughout codebase

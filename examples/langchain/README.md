@@ -193,7 +193,6 @@ Check that:
 
 ## Resources
 
-- **Integration Guide**: `docs/INTEGRATION_GUIDE.md`
-- **Integration Patterns**: `docs/INTEGRATION_PATTERNS.md`
+- **Integration Guide**: `docs/INTEGRATION_GUIDE.md` (includes all integration patterns)
 - **API Reference**: `docs/API_REFERENCE.md`
 - **Discord Community**: Join our [Discord](https://discord.gg/mqCqH7sTyK)
