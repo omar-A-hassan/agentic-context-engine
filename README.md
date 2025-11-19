@@ -17,6 +17,12 @@ Star ⭐️ this repo if you find it useful!
 
 ---
 
+## 🤖 LLM Quickstart
+1. Direct your favorite coding agent (Cursor, Claude Code, Codex, etc) to [Quick Start Guide](docs/QUICK_START.md)
+2. Prompt away!
+
+---
+
 ## ✋ Quick Start
 
 ### 1. Install
@@ -85,8 +91,18 @@ pip install ace-framework[browser-use]
 from ace import ACEAgent
 from browser_use import ChatBrowserUse
 
-agent = ACEAgent(llm=ChatBrowserUse())
-await agent.run(task="Find top Hacker News post")  # Learns from each run
+# Two LLMs: ChatBrowserUse for browser, gpt-4o-mini for ACE learning
+agent = ACEAgent(
+    llm=ChatBrowserUse(),      # Browser execution
+    ace_model="gpt-4o-mini"    # ACE learning
+)
+
+await agent.run(task="Find top Hacker News post")
+agent.save_playbook("hn_expert.json")
+
+# Reuse learned knowledge
+agent = ACEAgent(llm=ChatBrowserUse(), playbook_path="hn_expert.json")
+await agent.run(task="New task")  # Starts smart!
 ```
 
 **Features:** Drop-in replacement for `browser_use.Agent`, automatic learning, reusable playbooks
