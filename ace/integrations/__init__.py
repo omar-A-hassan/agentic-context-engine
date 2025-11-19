@@ -7,7 +7,7 @@ allowing them to leverage ACE's learning capabilities.
 Available Integrations:
     - LiteLLM: ACELiteLLM - Quick-start agent for simple tasks
     - browser-use: ACEAgent - Self-improving browser automation
-    - LangChain: ACELangChain - Complex workflows with learning (coming soon)
+    - LangChain: ACELangChain - Complex workflows with learning
 
 Pattern:
     All integrations follow the same pattern:
@@ -26,6 +26,13 @@ Example:
     from browser_use import ChatBrowserUse
     agent = ACEAgent(llm=ChatBrowserUse())
     await agent.run(task="Find top HN post")
+
+    # LangChain
+    from ace.integrations import ACELangChain
+    from langchain_openai import ChatOpenAI
+    chain = ChatOpenAI(temperature=0)
+    ace_chain = ACELangChain(runnable=chain)
+    result = ace_chain.invoke("What is ACE?")
 """
 
 from .base import wrap_playbook_context
@@ -43,9 +50,18 @@ except ImportError:
     ACEAgent = None  # type: ignore
     BROWSER_USE_AVAILABLE = False
 
+# Import LangChain integration if available
+try:
+    from .langchain import ACELangChain, LANGCHAIN_AVAILABLE
+except ImportError:
+    ACELangChain = None  # type: ignore
+    LANGCHAIN_AVAILABLE = False
+
 __all__ = [
     "wrap_playbook_context",
     "ACELiteLLM",
     "ACEAgent",
+    "ACELangChain",
     "BROWSER_USE_AVAILABLE",
+    "LANGCHAIN_AVAILABLE",
 ]
