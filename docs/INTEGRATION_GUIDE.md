@@ -1,242 +1,231 @@
-# Integration Guide: Building Custom ACE Integrations
+# ACE Integration Guide
 
-Quick guide for integrating ACE learning with your custom agentic system.
-
-## Overview
-
-ACE integration pattern:
-1. **Your agent executes** (no ACE Generator needed)
-2. **Inject playbook context** before execution (optional)
-3. **Learn from results** after execution (Reflector + Curator)
-
-See [`ace/integrations/browser_use.py`](../ace/integrations/browser_use.py) for reference implementation.
+Comprehensive guide for integrating ACE learning with your agentic system.
 
 ---
 
-## Quick Start (5 min)
+## Table of Contents
 
-### Installation
-```bash
-pip install ace-framework
+1. [Integration vs Full Pipeline](#integration-vs-full-pipeline)
+2. [The Base Integration Pattern](#the-base-integration-pattern)
+3. [Building a Custom Integration](#building-a-custom-integration)
+4. [Reference Implementations](#reference-implementations)
+5. [Advanced Topics](#advanced-topics)
+6. [Troubleshooting](#troubleshooting)
+
+---
+
+## Integration vs Full Pipeline
+
+### Decision Tree: Which Approach Should You Use?
+
+```
+Do you have an existing agentic system?
+│
+├─ YES → Use INTEGRATION PATTERN
+│   │
+│   ├─ Browser automation? → Use ACEBrowserUse
+│   ├─ LangChain chains/agents? → Use ACELangChain
+│   └─ Custom agent? → Follow this guide
+│
+└─ NO → Use FULL ACE PIPELINE
+    │
+    ├─ Simple tasks (Q&A, classification)? → Use SimpleAgent
+    └─ Complex tasks (tools, workflows)? → Consider LangChain + ACELangChain
 ```
 
-### Minimal Example (50 lines)
+### What's the Difference?
+
+**INTEGRATION PATTERN** (this guide):
+- Your agent executes tasks (browser-use, LangChain, custom API)
+- ACE **learns** from results (doesn't execute)
+- Components: Playbook + Reflector + Curator (NO Generator)
+- Use case: Wrapping existing agents with learning
+
+**FULL ACE PIPELINE** (not this guide):
+- ACE Generator executes tasks
+- Full ACE components: Playbook + Generator + Reflector + Curator
+- Use case: Building new agents from scratch
+- See: `examples/simple_agent/` or `SimpleAgent` class
+
+---
+
+## The Base Integration Pattern
+
+All ACE integrations follow a three-step pattern:
+
+### Step 1: INJECT (Optional but Recommended)
+
+Add learned strategies from the playbook to your agent's input.
 
 ```python
-from ace import Playbook, Reflector, Curator, LiteLLMClient
 from ace.integrations.base import wrap_playbook_context
+from ace import Playbook
+
+playbook = Playbook()  # or load existing: Playbook.load_from_file("expert.json")
+task = "Process user request"
+
+# Inject playbook context
+if playbook.bullets():
+    enhanced_task = f"{task}\n\n{wrap_playbook_context(playbook)}"
+else:
+    enhanced_task = task  # No learned strategies yet
+```
+
+**What does `wrap_playbook_context()` do?**
+- Formats learned strategies with success rates
+- Adds usage instructions for the agent
+- Returns empty string if no bullets (safe to call always)
+
+### Step 2: EXECUTE
+
+Your agent runs normally - ACE doesn't interfere.
+
+```python
+# Your agent (any framework/API)
+result = your_agent.execute(enhanced_task)
+
+# Examples:
+# - Browser-use: await agent.run(task=enhanced_task)
+# - LangChain: chain.invoke({"input": enhanced_task})
+# - API: requests.post("/execute", json={"task": enhanced_task})
+# - Custom: my_agent.run(enhanced_task)
+```
+
+### Step 3: LEARN
+
+ACE analyzes the result and updates the playbook.
+
+```python
+from ace import LiteLLMClient, Reflector, Curator
 from ace.roles import GeneratorOutput
 
-# Setup
-playbook = Playbook()
+# Setup ACE learning components (do this once)
 llm = LiteLLMClient(model="gpt-4o-mini", max_tokens=2048)
 reflector = Reflector(llm)
 curator = Curator(llm)
 
-# Your agent's task
-task = "Process user request"
-
-# 1. BEFORE: Inject learned strategies (optional)
-if playbook.bullets():
-    enhanced_task = f"{task}\n\n{wrap_playbook_context(playbook)}"
-else:
-    enhanced_task = task
-
-# 2. EXECUTE: Your agent runs
-result = your_agent.execute(enhanced_task)  # Your custom agent
-
-# 3. AFTER: Learn from execution
-# Build adapter for Reflector
-# Note: bullet_ids are extracted from citations in reasoning
-from ace.roles import extract_cited_bullet_ids
-
-reasoning_text = f"Task: {task}"
+# Create adapter for Reflector interface
 generator_output = GeneratorOutput(
-    reasoning=reasoning_text,
-    final_answer=result.output,
-    bullet_ids=extract_cited_bullet_ids(reasoning_text),
-    raw={"success": result.success}
+    reasoning=f"Task: {task}",  # What happened
+    final_answer=result.output,  # Agent's output
+    bullet_ids=[],  # External agents don't cite bullets
+    raw={"success": result.success, "steps": result.steps}  # Metadata
 )
 
-# Build feedback
-feedback = f"Task {'succeeded' if result.success else 'failed'}"
+# Build feedback string
+feedback = f"Task {'succeeded' if result.success else 'failed'}. Output: {result.output}"
 
-# Reflect
+# Reflect: Analyze what worked/failed
 reflection = reflector.reflect(
     question=task,
     generator_output=generator_output,
     playbook=playbook,
-    ground_truth=None,
+    ground_truth=None,  # Optional: expected output
     feedback=feedback
 )
 
-# Curate
+# Curate: Generate playbook updates
 curator_output = curator.curate(
     reflection=reflection,
     playbook=playbook,
     question_context=f"task: {task}",
-    progress=f"Task: {task}"
+    progress=f"Executing: {task}"
 )
 
-# Update playbook
+# Apply updates
 playbook.apply_delta(curator_output.delta)
 
-# Save for reuse
-playbook.save_to_file("learned.json")
+# Save for next time
+playbook.save_to_file("learned_strategies.json")
 ```
 
 ---
 
-## Core Components
+## Building a Custom Integration
 
-### 1. `wrap_playbook_context(playbook)`
-Formats learned strategies for your agent.
+### Wrapper Class Pattern (Recommended)
+
+Create a wrapper class that bundles your agent with ACE learning:
 
 ```python
+from ace import Playbook, LiteLLMClient, Reflector, Curator
 from ace.integrations.base import wrap_playbook_context
+from ace.roles import GeneratorOutput
 
-context = wrap_playbook_context(playbook)
-# Returns formatted markdown with strategies + usage instructions
-```
+class ACEWrapper:
+    """Wraps your custom agent with ACE learning."""
 
-### 2. Reflector
-Analyzes what went right/wrong.
-
-```python
-reflection = reflector.reflect(
-    question=task,
-    generator_output=GeneratorOutput(...),  # Adapter pattern
-    playbook=playbook,
-    ground_truth=None,  # Optional
-    feedback="Execution succeeded/failed because..."
-)
-```
-
-### 3. Curator
-Generates playbook updates.
-
-```python
-curator_output = curator.curate(
-    reflection=reflection,
-    playbook=playbook,
-    question_context="Domain info",
-    progress="Current task description"
-)
-
-playbook.apply_delta(curator_output.delta)
-```
-
-### 4. Rich Feedback for External Agents
-
-When integrating with agents that provide detailed execution traces (like browser-use), ACE can extract and use this information for better learning.
-
-**Example: Browser-Use Integration**
-
-The browser-use `AgentHistoryList` object provides:
-- `model_thoughts()` - Agent's reasoning at each step
-- `model_actions()` - Actions taken with parameters
-- `action_results()` - Detailed results for each action
-- `urls()` - URLs visited during execution
-- `errors()` - Per-step error information
-- `total_duration_seconds()` - Execution timing
-
-**Building Rich Feedback:**
-
-```python
-def build_rich_feedback(history, success, error=None):
-    """Extract comprehensive trace from agent history."""
-    feedback_parts = []
-
-    # Basic info
-    steps = history.number_of_steps()
-    feedback_parts.append(f"Task {'succeeded' if success else 'failed'} in {steps} steps")
-
-    # Agent reasoning
-    if hasattr(history, 'model_thoughts'):
-        thoughts = history.model_thoughts()
-        feedback_parts.append("\nAgent Reasoning:")
-        for i, thought in enumerate(thoughts[:3], 1):  # First 3 steps
-            feedback_parts.append(f"  Step {i}: {thought.next_goal}")
-
-    # Actions taken
-    if hasattr(history, 'model_actions'):
-        actions = history.model_actions()
-        action_names = [list(a.keys())[0] for a in actions[:5]]
-        feedback_parts.append(f"\nActions: {', '.join(action_names)}")
-
-    # URLs and errors
-    if hasattr(history, 'urls'):
-        urls = history.urls()
-        feedback_parts.append(f"URLs: {', '.join(filter(None, urls[:3]))}")
-
-    return "\n".join(feedback_parts)
-
-# Use in Reflector
-feedback = build_rich_feedback(history, success=True)
-reflection = reflector.reflect(
-    question=task,
-    generator_output=generator_output,
-    playbook=playbook,
-    feedback=feedback  # Rich feedback enables better learning
-)
-```
-
-**Benefits of Rich Feedback:**
-- Learns action sequencing patterns ("Wait after goto")
-- Understands timing requirements ("Page loads slowly")
-- Recognizes error patterns ("Element not visible before scroll")
-- Captures domain-specific knowledge ("news.ycombinator.com requires 2s wait")
-
-**See also:** `ace/integrations/browser_use.py` for complete implementation.
-
----
-
-## Wrapper Class Pattern
-
-```python
-class MyACEAgent:
-    def __init__(self, agent, ace_model="gpt-4o-mini"):
+    def __init__(
+        self,
+        agent,
+        ace_model: str = "gpt-4o-mini",
+        playbook_path: str = None,
+        is_learning: bool = True
+    ):
+        """
+        Args:
+            agent: Your agent instance
+            ace_model: Model for ACE learning (Reflector/Curator)
+            playbook_path: Path to existing playbook (optional)
+            is_learning: Enable/disable learning
+        """
         self.agent = agent
-        self.playbook = Playbook()
+        self.is_learning = is_learning
+
+        # Load or create playbook
+        if playbook_path:
+            self.playbook = Playbook.load_from_file(playbook_path)
+        else:
+            self.playbook = Playbook()
+
+        # Setup ACE learning components
         self.llm = LiteLLMClient(model=ace_model, max_tokens=2048)
         self.reflector = Reflector(self.llm)
         self.curator = Curator(self.llm)
-        self.is_learning = True
 
-    def run(self, task):
-        # Inject context
-        if self.is_learning and self.playbook.bullets():
-            task = f"{task}\n\n{wrap_playbook_context(self.playbook)}"
+    def run(self, task: str):
+        """Execute task with ACE learning."""
+        # STEP 1: Inject playbook context
+        enhanced_task = self._inject_context(task)
 
-        # Execute
-        result = self.agent.execute(task)
+        # STEP 2: Execute
+        result = self.agent.execute(enhanced_task)
 
-        # Learn
+        # STEP 3: Learn (if enabled)
         if self.is_learning:
             self._learn(task, result)
 
         return result
 
-    def _learn(self, task, result):
-        # Create adapter
-        from ace.roles import extract_cited_bullet_ids
+    def _inject_context(self, task: str) -> str:
+        """Add playbook strategies to task."""
+        if self.playbook.bullets():
+            return f"{task}\n\n{wrap_playbook_context(self.playbook)}"
+        return task
 
-        reasoning = f"Task: {task}"
-        gen_output = GeneratorOutput(
-            reasoning=reasoning,
+    def _learn(self, task: str, result):
+        """Run ACE learning pipeline."""
+        # Adapt result to ACE interface
+        generator_output = GeneratorOutput(
+            reasoning=f"Task: {task}",
             final_answer=result.output,
-            bullet_ids=extract_cited_bullet_ids(reasoning),
+            bullet_ids=[],
             raw={"success": result.success}
         )
 
-        # Reflect + Curate
+        # Build feedback
+        feedback = f"Task {'succeeded' if result.success else 'failed'}"
+
+        # Reflect
         reflection = self.reflector.reflect(
             question=task,
-            generator_output=gen_output,
+            generator_output=generator_output,
             playbook=self.playbook,
-            feedback=f"Result: {result.output}"
+            feedback=feedback
         )
 
+        # Curate
         curator_output = self.curator.curate(
             reflection=reflection,
             playbook=self.playbook,
@@ -244,191 +233,340 @@ class MyACEAgent:
             progress=task
         )
 
+        # Update playbook
         self.playbook.apply_delta(curator_output.delta)
+
+    def save_playbook(self, path: str):
+        """Save learned strategies."""
+        self.playbook.save_to_file(path)
+
+    def load_playbook(self, path: str):
+        """Load existing strategies."""
+        self.playbook = Playbook.load_from_file(path)
+
+    def enable_learning(self):
+        """Enable learning."""
+        self.is_learning = True
+
+    def disable_learning(self):
+        """Disable learning (execution only)."""
+        self.is_learning = False
+```
+
+### Usage Example
+
+```python
+# Your custom agent
+class MyAgent:
+    def execute(self, task: str):
+        # Your agent logic
+        return {"output": "result", "success": True}
+
+# Wrap with ACE
+my_agent = MyAgent()
+ace_agent = ACEWrapper(my_agent, is_learning=True)
+
+# Use it
+result = ace_agent.run("Process data")
+print(f"Result: {result.output}")
+print(f"Learned {len(ace_agent.playbook.bullets())} strategies")
+
+# Save learned knowledge
+ace_agent.save_playbook("my_agent_learned.json")
+
+# Next session: Load previous knowledge
+ace_agent = ACEWrapper(MyAgent(), playbook_path="my_agent_learned.json")
 ```
 
 ---
 
-## Citation-Based Strategy Tracking
+## Reference Implementations
 
-ACE uses citation-based tracking where agents cite strategy IDs inline in their reasoning:
+### Browser-Use Integration
 
-### How It Works
+See [`ace/integrations/browser_use.py`](../ace/integrations/browser_use.py) for a complete reference implementation.
 
-**When providing strategies to your agent:**
-- Strategies are formatted with IDs like `[content_extraction-00001]`
-- Agent cites them in reasoning: `"Following [content_extraction-00001], I will extract..."`
-- ACE extracts citations automatically using `extract_cited_bullet_ids()`
+**Key Design Decisions:**
 
-**Example:**
+1. **Context Injection** (line 182-189):
+```python
+if self.is_learning and self.playbook.bullets():
+    playbook_context = wrap_playbook_context(self.playbook)
+    enhanced_task = f"{current_task}\n\n{playbook_context}"
+```
+
+2. **Rich Feedback Extraction** (line 234-403):
+- Extracts chronological execution trace
+- Includes agent thoughts, actions, results
+- Provides detailed context for Reflector
+
+3. **Citation Extraction** (line 405-434):
+- Parses agent's reasoning for bullet citations
+- Filters invalid IDs (graceful degradation)
+
+4. **Learning Pipeline** (line 436-510):
+- Creates GeneratorOutput adapter
+- Passes full trace to Reflector in `reasoning` field
+- Updates playbook via Curator
+
+**Why Browser-Use is a Good Reference:**
+- Shows rich feedback extraction
+- Handles async execution
+- Robust error handling
+- Learning toggle
+- Playbook persistence
+
+---
+
+## Advanced Topics
+
+### Rich Feedback Extraction
+
+The quality of ACE learning depends on the feedback you provide. The more detailed, the better.
+
+**Basic Feedback (Minimal):**
+```python
+feedback = f"Task {'succeeded' if success else 'failed'}"
+```
+
+**Good Feedback (Contextual):**
+```python
+feedback = f"""
+Task {'succeeded' if success else 'failed'} in {steps} steps.
+Duration: {duration}s
+Final output: {output[:200]}...
+"""
+```
+
+**Rich Feedback (Detailed Trace):**
+```python
+# For agents with step-by-step execution
+feedback_parts = []
+feedback_parts.append(f"Task {status} in {steps} steps")
+
+# Add execution trace
+for i, step in enumerate(execution_steps, 1):
+    feedback_parts.append(f"\nStep {i}:")
+    feedback_parts.append(f"  Thought: {step.thought}")
+    feedback_parts.append(f"  Action: {step.action}")
+    feedback_parts.append(f"  Result: {step.result}")
+
+feedback = "\n".join(feedback_parts)
+```
+
+**Benefits of Rich Feedback:**
+- Learns action sequencing patterns
+- Understands timing requirements
+- Recognizes error patterns
+- Captures domain-specific knowledge
+
+### Citation-Based Strategy Tracking
+
+ACE uses citations to track which strategies were used:
+
+**How It Works:**
+1. Strategies are formatted with IDs: `[section-00001]`
+2. Agent cites them in reasoning: `"Following [navigation-00042], I will..."`
+3. ACE extracts citations automatically
+
+**Extracting Citations:**
 ```python
 from ace.roles import extract_cited_bullet_ids
 
 # Agent's reasoning with citations
 reasoning = """
-Step 1: Following [navigation-00042], navigate to the main page.
-Step 2: Using [extraction-00003], extract the title element.
+Step 1: Following [navigation-00042], navigate to main page.
+Step 2: Using [extraction-00003], extract title element.
 """
 
-# Extract cited strategies
+# Extract citations
 cited_ids = extract_cited_bullet_ids(reasoning)
 # Returns: ['navigation-00042', 'extraction-00003']
 
 # Pass to GeneratorOutput
-gen_output = GeneratorOutput(
+generator_output = GeneratorOutput(
     reasoning=reasoning,
-    final_answer="Title extracted",
-    bullet_ids=cited_ids,  # Extracted citations
+    final_answer=result,
+    bullet_ids=cited_ids,
     raw={}
 )
 ```
 
-**For External Agents (browser-use, etc.):**
+**For External Agents:**
 ```python
-# Extract citations from agent's thought process
+# Extract from agent's thought process
 if hasattr(history, 'model_thoughts'):
     thoughts = history.model_thoughts()
     thoughts_text = "\n".join(t.thinking for t in thoughts)
     cited_ids = extract_cited_bullet_ids(thoughts_text)
 ```
 
-**Citation Format:** `[section-digits]` pattern (e.g., `[general-00001]`, `[math-00042]`)
+### Handling Async Agents
 
----
+If your agent is async, wrap the learning in a sync function:
 
-## Best Practices
-
-### Token Limits
 ```python
-# Reflector needs 400-800 tokens, Curator needs 300-1000
-llm = LiteLLMClient(model="gpt-4o-mini", max_tokens=2048)  # Recommended
+async def run(self, task: str):
+    # Inject context
+    enhanced_task = self._inject_context(task)
+
+    # Execute (async)
+    result = await self.agent.execute(enhanced_task)
+
+    # Learn (sync Reflector/Curator)
+    if self.is_learning:
+        await asyncio.to_thread(self._learn, task, result)
+
+    return result
 ```
 
 ### Error Handling
+
+Always wrap learning in try/except to prevent crashes:
+
 ```python
-try:
-    reflection = reflector.reflect(...)
-except Exception as e:
-    logger.error(f"Reflection failed: {e}")
-    # Continue without learning
+def _learn(self, task: str, result):
+    try:
+        # Reflection
+        reflection = self.reflector.reflect(...)
+
+        # Curation
+        curator_output = self.curator.curate(...)
+
+        # Update
+        self.playbook.apply_delta(curator_output.delta)
+
+    except Exception as e:
+        logger.error(f"ACE learning failed: {e}")
+        # Continue without learning - don't crash!
 ```
 
-### Learning Control
+### Token Limits
+
+ACE learning components need sufficient tokens:
+
 ```python
-agent.is_learning = False  # Disable for debugging
-agent.is_learning = True   # Re-enable
-```
+# Reflector: 400-800 tokens typical
+# Curator: 300-1000 tokens typical
+llm = LiteLLMClient(model="gpt-4o-mini", max_tokens=2048)  # Recommended
 
-### Playbook Persistence
-```python
-# Save after each session
-agent.playbook.save_to_file("my_agent.json")
-
-# Load at startup
-agent.playbook = Playbook.load_from_file("my_agent.json")
-```
-
----
-
-## Common Patterns
-
-### API-Based Agents
-```python
-# After API call
-result = api_client.call(enhanced_task)
-
-gen_output = GeneratorOutput(
-    reasoning=f"API call: {endpoint}",
-    final_answer=result.json(),
-    bullet_ids=[],
-    raw={"status_code": result.status_code}
-)
-```
-
-### Multi-Step Agents
-```python
-# Learn from entire workflow
-feedback = f"Completed {len(steps)} steps. Final: {final_result}"
-```
-
-### Async Agents
-```python
-async def _learn_async(self, task, result):
-    # Reflector/Curator are sync, wrap if needed
-    await asyncio.to_thread(self._learn_sync, task, result)
-```
-
----
-
-## API Reference
-
-### `wrap_playbook_context(playbook: Playbook) -> str`
-Returns formatted strategies or empty string if no bullets.
-
-### `GeneratorOutput`
-```python
-GeneratorOutput(
-    reasoning: str,        # What the agent did
-    final_answer: str,     # Agent's output
-    bullet_ids: List[str], # Empty for external agents
-    raw: Dict[str, Any]    # Custom metadata
-)
-```
-
-### `Reflector.reflect()`
-```python
-reflect(
-    question: str,              # Task description
-    generator_output: GeneratorOutput,
-    playbook: Playbook,
-    ground_truth: Optional[str] = None,
-    feedback: Optional[str] = None
-) -> ReflectorOutput
-```
-
-### `Curator.curate()`
-```python
-curate(
-    reflection: ReflectorOutput,
-    playbook: Playbook,
-    question_context: str,  # Domain/task info
-    progress: str           # Current state
-) -> CuratorOutput
+# For complex tasks with long traces:
+llm = LiteLLMClient(model="gpt-4o-mini", max_tokens=4096)
 ```
 
 ---
 
 ## Troubleshooting
 
-**Q: JSON parsing errors from Curator?**
-A: Increase `max_tokens=2048` or higher.
+### Problem: JSON Parsing Errors from Curator
 
-**Q: Not learning anything?**
-A: Check `is_learning=True` and verify Curator output has operations.
+**Cause:** Insufficient `max_tokens` for structured output
 
-**Q: Too many bullets?**
-A: Curator auto-manages via TAG operations. Review with `playbook.bullets()`.
+**Solution:**
+```python
+llm = LiteLLMClient(model="gpt-4o-mini", max_tokens=2048)  # or higher
+```
 
-**Q: High costs?**
-A: Disable learning for simple tasks, use cheaper model (gpt-4o-mini).
+### Problem: Not Learning Anything
+
+**Checks:**
+1. Is `is_learning=True`?
+2. Is Curator output non-empty? `print(curator_output.delta)`
+3. Is playbook being saved? `playbook.save_to_file(...)`
+
+### Problem: Too Many Bullets
+
+**Solution:** Curator automatically manages bullets via TAG operations. Review with:
+```python
+bullets = playbook.bullets()
+print(f"Total: {len(bullets)}")
+for b in bullets[:10]:
+    print(f"[{b.id}] +{b.helpful}/-{b.harmful}: {b.content}")
+```
+
+### Problem: High API Costs
+
+**Solutions:**
+- Use cheaper model: `ace_model="gpt-4o-mini"`
+- Disable learning for simple tasks: `is_learning=False`
+- Batch learning: Learn only every N tasks
+
+### Problem: Agent Ignores Playbook Strategies
+
+**Checks:**
+1. Are you actually injecting context? `print(enhanced_task)`
+2. Does playbook have bullets? `print(len(playbook.bullets()))`
+3. Is context clear enough for your agent?
 
 ---
 
-## Examples
+## Common Integration Patterns
 
-See working implementations:
-- [`ace/integrations/browser_use.py`](../ace/integrations/browser_use.py) - Browser automation
-- [`examples/browser-use/simple_ace_agent.py`](../examples/browser-use/simple_ace_agent.py) - Complete example
-- [`examples/custom_integration_example.py`](../examples/custom_integration_example.py) - Minimal custom agent
+### REST API-Based Agents
+
+```python
+class APIAgent:
+    def execute(self, task: str):
+        response = requests.post(
+            "https://api.example.com/execute",
+            json={"task": task}
+        )
+        return {
+            "output": response.json()["result"],
+            "success": response.status_code == 200
+        }
+
+# Wrap with ACE
+ace_agent = ACEWrapper(APIAgent())
+```
+
+### Multi-Step Workflow Agents
+
+```python
+def _learn(self, task, result):
+    # Build rich feedback from all steps
+    feedback = f"Workflow completed {len(result.steps)} steps:\n"
+    for i, step in enumerate(result.steps, 1):
+        feedback += f"Step {i}: {step.action} → {step.outcome}\n"
+
+    generator_output = GeneratorOutput(
+        reasoning=feedback,  # Full workflow trace
+        final_answer=result.final_output,
+        bullet_ids=[],
+        raw={"steps": len(result.steps)}
+    )
+    # ... rest of learning pipeline
+```
+
+### Tool-Using Agents
+
+```python
+def _inject_context(self, task: str) -> str:
+    """Inject into system message instead of task."""
+    if self.playbook.bullets():
+        context = wrap_playbook_context(self.playbook)
+        # Add to system message or tool descriptions
+        self.agent.system_message = f"{self.agent.system_message}\n\n{context}"
+    return task
+```
 
 ---
 
 ## Next Steps
 
-1. Start with the minimal example above
-2. Adapt `_learn()` method to your agent's output format
-3. Test with `is_learning=False` first
-4. Enable learning and monitor playbook growth
-5. Save/load playbooks for persistence
+1. **Start Simple:** Use the wrapper class template above
+2. **Adapt `_learn()`:** Customize for your agent's output format
+3. **Test Without Learning:** Set `is_learning=False` first
+4. **Enable Learning:** Turn on and monitor playbook growth
+5. **Iterate:** Improve feedback extraction for better learning
 
-Questions? See [ACE Complete Guide](COMPLETE_GUIDE_TO_ACE.md) or [Discord](https://discord.gg/mqCqH7sTyK).
+---
+
+## See Also
+
+- **Out-of-box integrations:** SimpleAgent, ACEBrowserUse, ACELangChain
+- **Integration patterns:** [INTEGRATION_PATTERNS.md](INTEGRATION_PATTERNS.md)
+- **Full ACE guide:** [COMPLETE_GUIDE_TO_ACE.md](COMPLETE_GUIDE_TO_ACE.md)
+- **API reference:** [API_REFERENCE.md](API_REFERENCE.md)
+
+Questions? Join our [Discord](https://discord.gg/mqCqH7sTyK)
