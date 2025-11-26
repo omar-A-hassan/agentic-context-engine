@@ -149,7 +149,18 @@ List specific Python files from source/ that need translation."""
         print(f" EXECUTING TASK {task_count}")
         print("=" * 70 + "\n")
 
-        result = agent.run(task=task, context=context)
+        # Add instruction for Claude Code to mark task complete and stop
+        if task_count > 1:  # Only for tasks from TODO.md, not bootstrap
+            task_prompt = f"""{task}
+
+After completing this task:
+1. Update TODO.md: Mark this task as [x] (change [ ] to [x])
+2. STOP - do not continue to next tasks (the loop will call you again)
+"""
+        else:
+            task_prompt = task
+
+        result = agent.run(task=task_prompt, context=context)
         results.append(result)
 
         # Summary

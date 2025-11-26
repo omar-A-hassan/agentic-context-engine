@@ -165,7 +165,13 @@ class ACEClaudeCode:
             env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
 
             result = subprocess.run(
-                ["claude", "--print", "--output-format=stream-json", "--verbose"],
+                [
+                    "claude",
+                    "--print",
+                    "--output-format=stream-json",
+                    "--verbose",
+                    "--dangerously-skip-permissions",
+                ],
                 input=prompt,
                 text=True,
                 cwd=str(self.working_dir),
