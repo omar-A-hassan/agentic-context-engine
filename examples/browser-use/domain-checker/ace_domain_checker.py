@@ -496,6 +496,7 @@ async def main():
         playbook_path=str(playbook_path) if playbook_path.exists() else None,
         max_steps=25,  # Browser automation steps
         calculate_cost=True,  # Track usage
+        async_learning=True,  # Learning happens in background (non-blocking)
     )
 
     # Show current knowledge
@@ -544,6 +545,11 @@ async def main():
         if i < len(domains):
             print(f"⏳ Waiting 2 seconds before next check...")
             await asyncio.sleep(2)
+
+    # Wait for async learning to complete before saving
+    print(f"\n⏳ Waiting for background learning to complete...")
+    await agent.wait_for_learning(timeout=60.0)
+    print(f"✅ Learning complete: {agent.learning_stats}")
 
     # Save learned strategies
     agent.save_playbook(str(playbook_path))

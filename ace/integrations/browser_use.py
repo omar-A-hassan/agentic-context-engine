@@ -20,7 +20,7 @@ Example:
 """
 
 import asyncio
-from typing import Optional, Any, Callable, List
+from typing import Optional, Any, Callable, Dict, List
 from pathlib import Path
 
 try:
@@ -94,6 +94,7 @@ class ACEAgent:
         playbook: Optional[Playbook] = None,
         playbook_path: Optional[str] = None,
         is_learning: bool = True,
+        async_learning: bool = False,
         **agent_kwargs,
     ):
         """
@@ -112,6 +113,8 @@ class ACEAgent:
             playbook: Existing Playbook instance
             playbook_path: Path to load playbook from
             is_learning: Enable/disable ACE learning
+            async_learning: If True, learning happens in background (non-blocking).
+                Use wait_for_learning() before saving playbook.
             **agent_kwargs: Additional browser-use Agent parameters
                 (max_steps, use_vision, step_timeout, max_failures, etc.)
         """
@@ -125,7 +128,11 @@ class ACEAgent:
         self.browser_llm = llm
         self.browser = browser
         self.is_learning = is_learning
+        self._async_learning = async_learning
         self.agent_kwargs = agent_kwargs
+
+        # Async learning task tracking
+        self._learning_tasks: List[asyncio.Task] = []
 
         # Always create playbook and ACE components
         # (but only use them if is_learning=True)
@@ -215,7 +222,17 @@ class ACEAgent:
 
             # Learn from successful execution (only if is_learning=True)
             if self.is_learning:
-                await self._learn_from_execution(current_task, history, success=True)
+                if self._async_learning:
+                    # Fire and forget - learning in background
+                    learning_task = asyncio.create_task(
+                        self._learn_from_execution(current_task, history, success=True)
+                    )
+                    self._learning_tasks.append(learning_task)
+                else:
+                    # Sync mode - wait for learning
+                    await self._learn_from_execution(
+                        current_task, history, success=True
+                    )
 
             return history
 
@@ -223,12 +240,23 @@ class ACEAgent:
             error = str(e)
             # Learn from failure too (only if is_learning=True)
             if self.is_learning:
-                await self._learn_from_execution(
-                    current_task,
-                    history if "history" in locals() else None,
-                    success=False,
-                    error=error,
-                )
+                if self._async_learning:
+                    learning_task = asyncio.create_task(
+                        self._learn_from_execution(
+                            current_task,
+                            history if "history" in locals() else None,
+                            success=False,
+                            error=error,
+                        )
+                    )
+                    self._learning_tasks.append(learning_task)
+                else:
+                    await self._learn_from_execution(
+                        current_task,
+                        history if "history" in locals() else None,
+                        success=False,
+                        error=error,
+                    )
             raise
 
     def _build_rich_feedback(
@@ -516,6 +544,63 @@ class ACEAgent:
     def disable_learning(self):
         """Disable ACE learning (execution only, no updates to playbook)."""
         self.is_learning = False
+
+    # -----------------------------------------------------------------------
+    # Async Learning Control
+    # -----------------------------------------------------------------------
+
+    async def wait_for_learning(self, timeout: Optional[float] = None) -> bool:
+        """Wait for all background learning tasks to complete.
+
+        Args:
+            timeout: Max seconds to wait (None = wait forever)
+
+        Returns:
+            True if all tasks completed, False if timeout
+        """
+        if not self._learning_tasks:
+            return True
+
+        # Clean up completed tasks first
+        self._learning_tasks = [t for t in self._learning_tasks if not t.done()]
+
+        if not self._learning_tasks:
+            return True
+
+        try:
+            await asyncio.wait_for(
+                asyncio.gather(*self._learning_tasks, return_exceptions=True),
+                timeout=timeout,
+            )
+            self._learning_tasks.clear()
+            return True
+        except asyncio.TimeoutError:
+            return False
+
+    @property
+    def learning_stats(self) -> Dict[str, Any]:
+        """Get learning progress statistics.
+
+        Returns:
+            Dict with tasks_submitted, pending, completed counts
+        """
+        # Clean up completed tasks
+        pending = [t for t in self._learning_tasks if not t.done()]
+        completed = len(self._learning_tasks) - len(pending)
+
+        return {
+            "tasks_submitted": len(self._learning_tasks),
+            "pending": len(pending),
+            "completed": completed,
+            "async_learning": self._async_learning,
+        }
+
+    def stop_async_learning(self):
+        """Cancel all pending learning tasks."""
+        for task in self._learning_tasks:
+            if not task.done():
+                task.cancel()
+        self._learning_tasks.clear()
 
     def save_playbook(self, path: str):
         """Save learned playbook to file."""
