@@ -469,8 +469,11 @@ class ACEAgent:
 
         Flow: Reflector → Curator → Update Playbook
         (No Generator - browser-use already executed)
+
+        Uses asyncio.to_thread() to run sync LLM calls in a thread pool,
+        preventing event loop blocking when async_learning=True.
         """
-        # Extract rich trace information
+        # Extract rich trace information (fast, no LLM calls)
         trace_info = self._build_rich_feedback(history, success, error)
 
         # Extract cited bullet IDs from agent thoughts (clean, no tool noise)
@@ -484,6 +487,32 @@ class ACEAgent:
             if self.playbook.get_bullet(bullet_id) is not None
         ]
 
+        # Run sync learning in thread pool (doesn't block event loop)
+        await asyncio.to_thread(
+            self._sync_learn,
+            task,
+            trace_info,
+            valid_cited_ids,
+            cited_ids,
+            success,
+            error,
+        )
+
+    def _sync_learn(
+        self,
+        task: str,
+        trace_info: Dict[str, Any],
+        valid_cited_ids: List[str],
+        cited_ids: List[str],
+        success: bool,
+        error: Optional[str],
+    ):
+        """
+        Synchronous learning logic (runs in thread pool).
+
+        This method contains the actual LLM calls (Reflector + Curator)
+        which are synchronous and would block the event loop if called directly.
+        """
         # Create GeneratorOutput (browser executed, not ACE Generator)
         # This is a "fake" output to satisfy Reflector's interface
         # IMPORTANT: Pass full trace as reasoning so Reflector can analyze agent's thoughts
@@ -511,7 +540,7 @@ class ACEAgent:
         if error:
             feedback_summary += f"\nError: {error}"
 
-        # Run Reflector
+        # Run Reflector (sync LLM call)
         reflection = self.reflector.reflect(
             question=task,
             generator_output=generator_output,
@@ -520,7 +549,7 @@ class ACEAgent:
             feedback=feedback_summary,
         )
 
-        # Run Curator with enriched context
+        # Run Curator with enriched context (sync LLM call)
         curator_output = self.curator.curate(
             reflection=reflection,
             playbook=self.playbook,
