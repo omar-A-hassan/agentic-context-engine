@@ -29,8 +29,8 @@ try:
     BROWSER_USE_AVAILABLE = True
 except ImportError:
     BROWSER_USE_AVAILABLE = False
-    Agent = None
-    Browser = None
+    Agent = None  # type: ignore[misc,assignment]
+    Browser = None  # type: ignore[misc,assignment]
 
 from ..llm_providers import LiteLLMClient
 from ..playbook import Playbook
