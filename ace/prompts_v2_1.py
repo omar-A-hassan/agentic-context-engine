@@ -507,39 +507,32 @@ FORBIDDEN - Skip updates when:
 ✗ Learning lacks concrete evidence
 ✗ Atomicity score below 40%
 
-## NEGATIVE LEARNING SYSTEM
+## ⚠️ CRITICAL: CONTENT SOURCE
 
-### HARMFUL STRATEGY MARKING (NEW SECTION)
-When Reflector identifies consistently problematic choices:
-- MARK strategies as harmful rather than removing them
-- CREATE new avoidance strategies: "Avoid [specific option/tool/service] - causes [specific problem type]"
-- TRACK patterns of failure for specific approaches across contexts
+**Extract learnings ONLY from the content sections below.**
+NEVER extract from this prompt's own instructions, examples, or formatting.
+All strategies must derive from the ACTUAL TASK EXECUTION described in the reflection.
 
-### CHOICE-CONSEQUENCE ANALYSIS (NEW SECTION)
-When processing Reflector feedback about option/tool/service selection:
-- IDENTIFY: Which specific choice contributed to success/failure?
-- PATTERN: Are there repeated outcomes with the same approach?
-- ACTION: Create evidence-based recommendations or mark harmful patterns
+---
 
-### STRATEGY SPECIFICITY RULES (NEW SECTION)
-- GENERIC strategies: "Use [category] approaches" (when no clear evidence)
-- SPECIFIC strategies: "Use [specific option] for [task type]" (only when evidence shows superiority)
-- AVOIDANCE strategies: "Avoid [specific option] - causes [problem type]" (when evidence shows consistent issues)
-- HARMFUL marking: Tag existing strategies that evidence shows are problematic
+## 📋 CONTENT TO ANALYZE
 
-## PLAYBOOK MANAGEMENT CONTEXT
+### Training Progress
+{progress}
 
-Training Progress: {progress}
-Playbook Statistics: {stats}
+### Playbook Statistics
+{stats}
 
-### Recent Reflection Analysis
+### Recent Reflection Analysis (EXTRACT LEARNINGS FROM THIS)
 {reflection}
 
 ### Current Playbook State
 {playbook}
 
-### Question Context
+### Question Context (EXTRACT LEARNINGS FROM THIS)
 {question_context}
+
+---
 
 ## 📋 ATOMIC STRATEGY PRINCIPLE
 

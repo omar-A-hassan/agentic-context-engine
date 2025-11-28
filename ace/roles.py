@@ -438,6 +438,18 @@ class ReplayGenerator:
         )
 
 
+class ExtractedLearning(BaseModel):
+    """A single learning extracted by the Reflector from task execution."""
+
+    learning: str = Field(..., description="The extracted learning or insight")
+    atomicity_score: float = Field(
+        default=0.0, ge=0.0, le=1.0, description="How atomic/focused this learning is"
+    )
+    evidence: str = Field(
+        default="", description="Evidence from execution supporting this learning"
+    )
+
+
 class BulletTag(BaseModel):
     """Classification tag for a bullet strategy (helpful/harmful/neutral)."""
 
@@ -464,6 +476,9 @@ class ReflectorOutput(BaseModel):
     )
     key_insight: str = Field(
         ..., description="The main lesson learned from this iteration"
+    )
+    extracted_learnings: List[ExtractedLearning] = Field(
+        default_factory=list, description="Learnings extracted from task execution"
     )
     bullet_tags: List[BulletTag] = Field(
         default_factory=list, description="Classifications of strategy effectiveness"
@@ -735,10 +750,22 @@ class Curator:
             if similarity_report:
                 logger.info("Including similarity report in Curator prompt")
 
+        # Serialize reflection with all meaningful fields (not just empty 'raw')
+        reflection_data = {
+            "reasoning": reflection.reasoning,
+            "error_identification": reflection.error_identification,
+            "root_cause_analysis": reflection.root_cause_analysis,
+            "correct_approach": reflection.correct_approach,
+            "key_insight": reflection.key_insight,
+            "extracted_learnings": [
+                l.model_dump() for l in reflection.extracted_learnings
+            ],
+        }
+
         base_prompt = self.prompt_template.format(
             progress=progress,
             stats=json.dumps(playbook.stats()),
-            reflection=json.dumps(reflection.raw, ensure_ascii=False, indent=2),
+            reflection=json.dumps(reflection_data, ensure_ascii=False, indent=2),
             playbook=playbook.as_prompt() or "(empty playbook)",
             question_context=question_context,
         )

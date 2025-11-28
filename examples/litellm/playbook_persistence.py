@@ -225,5 +225,5 @@ if __name__ == "__main__":
             print(f.read())
 
         # Clean up
-        os.remove(test_path)
+        # os.remove(test_path)
         print(f"\n✓ Cleaned up {test_path}")
