@@ -29,7 +29,7 @@ def train_and_save_playbook():
     print("=" * 60)
 
     # Initialize components (v2.1 prompts are now the default)
-    client = LiteLLMClient(model="gpt-4o-mini")
+    client = LiteLLMClient(model="claude-sonnet-4-5-20250929")
     generator = Generator(client)
     reflector = Reflector(client)
     curator = Curator(client)
@@ -94,7 +94,7 @@ def load_and_use_playbook(playbook_path):
     print(f"✅ Loaded playbook with {len(playbook.bullets())} strategies")
 
     # Use the loaded playbook with a new adapter
-    client = LiteLLMClient(model="gpt-4o-mini")
+    client = LiteLLMClient(model="claude-sonnet-4-5-20250929")
     generator = Generator(client)
 
     # Test with a new reasoning question (similar type to training)

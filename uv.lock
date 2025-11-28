@@ -43,6 +43,7 @@ dependencies = [
 all = [
     { name = "accelerate" },
     { name = "browser-use" },
+    { name = "langchain-anthropic" },
     { name = "langchain-litellm" },
     { name = "langchain-openai" },
     { name = "opik" },
@@ -53,6 +54,7 @@ browser-use = [
     { name = "browser-use" },
 ]
 langchain = [
+    { name = "langchain-anthropic" },
     { name = "langchain-litellm" },
     { name = "langchain-openai" },
 ]
@@ -93,6 +95,8 @@ requires-dist = [
     { name = "browser-use", marker = "extra == 'all'", specifier = ">=0.9.0" },
     { name = "browser-use", marker = "extra == 'browser-use'", specifier = ">=0.9.0" },
     { name = "instructor", specifier = ">=1.0.0" },
+    { name = "langchain-anthropic", marker = "extra == 'all'", specifier = ">=0.3.0" },
+    { name = "langchain-anthropic", marker = "extra == 'langchain'", specifier = ">=0.3.0" },
     { name = "langchain-litellm", marker = "extra == 'all'", specifier = ">=0.2.0" },
     { name = "langchain-litellm", marker = "extra == 'langchain'", specifier = ">=0.2.0" },
     { name = "langchain-openai", marker = "extra == 'all'", specifier = ">=0.3.35" },
@@ -241,7 +245,7 @@ wheels = [
 
 [[package]]
 name = "anthropic"
-version = "0.71.0"
+version = "0.75.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -253,9 +257,9 @@ dependencies = [
     { name = "sniffio" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/82/4f/70682b068d897841f43223df82d96ec1d617435a8b759c4a2d901a50158b/anthropic-0.71.0.tar.gz", hash = "sha256:eb8e6fa86d049061b3ef26eb4cbae0174ebbff21affa6de7b3098da857d8de6a", size = 489102, upload-time = "2025-10-16T15:54:40.08Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/04/1f/08e95f4b7e2d35205ae5dcbb4ae97e7d477fc521c275c02609e2931ece2d/anthropic-0.75.0.tar.gz", hash = "sha256:e8607422f4ab616db2ea5baacc215dd5f028da99ce2f022e33c7c535b29f3dfb", size = 439565, upload-time = "2025-11-24T20:41:45.28Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5d/77/073e8ac488f335aec7001952825275582fb8f433737e90f24eeef9d878f6/anthropic-0.71.0-py3-none-any.whl", hash = "sha256:85c5015fcdbdc728390f11b17642a65a4365d03b12b799b18b6cc57e71fdb327", size = 355035, upload-time = "2025-10-16T15:54:38.238Z" },
+    { url = "https://files.pythonhosted.org/packages/60/1c/1cd02b7ae64302a6e06724bf80a96401d5313708651d277b1458504a1730/anthropic-0.75.0-py3-none-any.whl", hash = "sha256:ea8317271b6c15d80225a9f3c670152746e88805a7a61e14d4a374577164965b", size = 388164, upload-time = "2025-11-24T20:41:43.587Z" },
 ]
 
 [[package]]
@@ -1544,8 +1548,22 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain-anthropic"
+version = "1.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anthropic" },
+    { name = "langchain-core" },
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/66/f2/717dcadf0c96960154594409b68bdd5953ab95439e0b65de13cdd5c08785/langchain_anthropic-1.2.0.tar.gz", hash = "sha256:3f3cfad8c519ead2deb21c30dc538b18f4c094704c7874784320cbed7a199453", size = 688803, upload-time = "2025-11-24T14:17:17.424Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ae/f4/f684725bd375208130ff3e9878ff3e671d888eec89a834617f3d7bcc14c9/langchain_anthropic-1.2.0-py3-none-any.whl", hash = "sha256:f489df97833e12ca0360a098eb9d04e410752840416be87ab60b0a3e120a99fe", size = 49512, upload-time = "2025-11-24T14:17:16.048Z" },
+]
+
+[[package]]
 name = "langchain-core"
-version = "0.3.79"
+version = "1.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jsonpatch" },
@@ -1556,36 +1574,36 @@ dependencies = [
     { name = "tenacity" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c8/99/f926495f467e0f43289f12e951655d267d1eddc1136c3cf4dd907794a9a7/langchain_core-0.3.79.tar.gz", hash = "sha256:024ba54a346dd9b13fb8b2342e0c83d0111e7f26fa01f545ada23ad772b55a60", size = 580895, upload-time = "2025-10-09T21:59:08.359Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1e/17/67c1cc2ace919e2b02dd9d783154d7fb3f1495a4ef835d9cd163b7855ac2/langchain_core-1.1.0.tar.gz", hash = "sha256:2b76a82d427922c8bc51c08404af4fc2a29e9f161dfe2297cb05091e810201e7", size = 781995, upload-time = "2025-11-21T21:01:26.958Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fc/71/46b0efaf3fc6ad2c2bd600aef500f1cb2b7038a4042f58905805630dd29d/langchain_core-0.3.79-py3-none-any.whl", hash = "sha256:92045bfda3e741f8018e1356f83be203ec601561c6a7becfefe85be5ddc58fdb", size = 449779, upload-time = "2025-10-09T21:59:06.493Z" },
+    { url = "https://files.pythonhosted.org/packages/71/1e/e129fc471a2d2a7b3804480a937b5ab9319cab9f4142624fcb115f925501/langchain_core-1.1.0-py3-none-any.whl", hash = "sha256:2c9f27dadc6d21ed4aa46506a37a56e6a7e2d2f9141922dc5c251ba921822ee6", size = 473752, upload-time = "2025-11-21T21:01:25.841Z" },
 ]
 
 [[package]]
 name = "langchain-litellm"
-version = "0.3.0"
+version = "0.3.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "langchain-core" },
     { name = "litellm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f9/0e/f5583b4b63da7ecd1c3b45bd9c9f97b727761e492a0c07869a8779ea28dd/langchain_litellm-0.3.0.tar.gz", hash = "sha256:94d7c106c5c9c81eba0e54ce9a4f720c61461d2f5592ad612e974f096866b351", size = 11184, upload-time = "2025-10-20T11:55:27.014Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d2/3e/b7b5a8e3461f5ba0cb40e8ea175d64332a4ae15d877b91058fbb6a25045b/langchain_litellm-0.3.2.tar.gz", hash = "sha256:65f44ca723f660f853f6c31f82107dd87ec0ca11be842d149300a06e23cc0c4e", size = 12282, upload-time = "2025-11-20T13:23:32.808Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b7/14/3409f8cbb9e05019b6aa4f951ea937f933029552cfb59b8d10bbe84e5386/langchain_litellm-0.3.0-py3-none-any.whl", hash = "sha256:029afdce461fc51ff45fd06e0c2467b79304e5cc127e3596e208182ce0f637ba", size = 11861, upload-time = "2025-10-20T11:55:25.961Z" },
+    { url = "https://files.pythonhosted.org/packages/6b/03/62a912fbb2139ffbc1d02ef25cd1af3d1063e318be7f4b509f3d94552f9d/langchain_litellm-0.3.2-py3-none-any.whl", hash = "sha256:93b764021eab1d4a419769dd973cf973671c2e9a7e6084c105699657933b24c9", size = 12985, upload-time = "2025-11-20T13:23:31.994Z" },
 ]
 
 [[package]]
 name = "langchain-openai"
-version = "0.3.35"
+version = "1.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "langchain-core" },
     { name = "openai" },
     { name = "tiktoken" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fb/96/06d0d25a37e05a0ff2d918f0a4b0bf0732aed6a43b472b0b68426ce04ef8/langchain_openai-0.3.35.tar.gz", hash = "sha256:fa985fd041c3809da256a040c98e8a43e91c6d165b96dcfeb770d8bd457bf76f", size = 786635, upload-time = "2025-10-06T15:09:28.463Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/18/29/cc7a7d1c42d19c903efa3ef9c9f00042942d28a00da1af12be5b7035375d/langchain_openai-1.1.0.tar.gz", hash = "sha256:9a33280c2e8315d013d64e6b15e583be347beb0d0f281755c335ae504ad0c184", size = 1034339, upload-time = "2025-11-24T14:20:48.929Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d8/d5/c90c5478215c20ee71d8feaf676f7ffd78d0568f8c98bd83f81ce7562ed7/langchain_openai-0.3.35-py3-none-any.whl", hash = "sha256:76d5707e6e81fd461d33964ad618bd326cb661a1975cef7c1cb0703576bdada5", size = 75952, upload-time = "2025-10-06T15:09:27.137Z" },
+    { url = "https://files.pythonhosted.org/packages/da/ff/82699ef76f36818d86571a0b086ce07af5503a63d7430fc49e7d6aeb5dc1/langchain_openai-1.1.0-py3-none-any.whl", hash = "sha256:243bb345d0260ea1326c2b6ac2237ec29f082ab457c59e9306bac349df4577e8", size = 84282, upload-time = "2025-11-24T14:20:47.717Z" },
 ]
 
 [[package]]

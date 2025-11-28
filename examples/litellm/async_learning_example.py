@@ -24,7 +24,7 @@ def run_sync_learning():
     print("SYNC MODE - Learning blocks after each sample")
     print("=" * 60)
 
-    agent = ACELiteLLM(model="gpt-4o-mini")
+    agent = ACELiteLLM(model="claude-sonnet-4-5-20250929")
 
     samples = [
         Sample(question="What is 2+2?", ground_truth="4"),
@@ -63,7 +63,7 @@ def run_async_learning():
     print("ASYNC MODE - Learning runs in background")
     print("=" * 60)
 
-    agent = ACELiteLLM(model="gpt-4o-mini")
+    agent = ACELiteLLM(model="claude-sonnet-4-5-20250929")
 
     samples = [
         Sample(question="What is 2+2?", ground_truth="4"),
@@ -122,8 +122,8 @@ def run_async_learning():
 
 
 def main():
-    if not os.getenv("OPENAI_API_KEY"):
-        print("Please set OPENAI_API_KEY in your .env file")
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        print("Please set ANTHROPIC_API_KEY in your .env file")
         return
 
     print("=" * 60)

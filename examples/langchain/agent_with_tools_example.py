@@ -18,10 +18,10 @@ Meso-level learning captures:
 
 Requirements:
     pip install ace-framework[langchain]
-    # or: pip install langchain langchain-openai
+    # or: pip install langchain langchain-anthropic
 
 Environment:
-    export OPENAI_API_KEY="your-api-key"
+    export ANTHROPIC_API_KEY="your-api-key"
 """
 
 import os
@@ -46,7 +46,7 @@ except ImportError:
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.tools import tool
-from langchain_openai import ChatOpenAI
+from langchain_anthropic import ChatAnthropic
 
 
 # Define custom tools
@@ -84,15 +84,15 @@ def example_agent_executor_meso():
     print("Example 1: AgentExecutor with Meso-Level Learning")
     print("=" * 60)
 
-    if not os.getenv("OPENAI_API_KEY"):
-        print("Please set OPENAI_API_KEY in your .env file")
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        print("Please set ANTHROPIC_API_KEY in your .env file")
         return
 
     # Create tools
     tools = [add, multiply, get_word_length]
 
     # Create LLM
-    llm = ChatOpenAI(temperature=0, model="gpt-4o-mini")
+    llm = ChatAnthropic(temperature=0, model="claude-sonnet-4-5-20250929")
 
     # Create prompt for tool-calling agent
     prompt = ChatPromptTemplate.from_messages(
@@ -115,7 +115,9 @@ def example_agent_executor_meso():
 
     # Wrap with ACE - meso-level learning is automatic for AgentExecutor!
     ace_agent = ACELangChain(
-        runnable=agent_executor, ace_model="gpt-4o-mini", is_learning=True
+        runnable=agent_executor,
+        ace_model="claude-sonnet-4-5-20250929",
+        is_learning=True,
     )
 
     print("\nNote: ACE automatically uses meso-level learning for AgentExecutor.")
@@ -164,11 +166,11 @@ def example_simple_chain_vs_agent():
     print("Example 2: Simple Chain vs AgentExecutor")
     print("=" * 60)
 
-    if not os.getenv("OPENAI_API_KEY"):
-        print("Please set OPENAI_API_KEY in your .env file")
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        print("Please set ANTHROPIC_API_KEY in your .env file")
         return
 
-    llm = ChatOpenAI(temperature=0, model="gpt-4o-mini")
+    llm = ChatAnthropic(temperature=0, model="claude-sonnet-4-5-20250929")
     tools = [add, multiply]
 
     # --- Simple chain: basic learning ---
@@ -178,7 +180,9 @@ def example_simple_chain_vs_agent():
     )
     simple_chain = simple_prompt | llm
 
-    ace_simple = ACELangChain(runnable=simple_chain, ace_model="gpt-4o-mini")
+    ace_simple = ACELangChain(
+        runnable=simple_chain, ace_model="claude-sonnet-4-5-20250929"
+    )
     result_simple = ace_simple.invoke({"input": "What is 5 * 6?"})
     print(f"Result: {result_simple.content}")
     print(f"Strategies learned: {len(ace_simple.playbook.bullets())}")
@@ -196,7 +200,9 @@ def example_simple_chain_vs_agent():
     agent = create_tool_calling_agent(llm, tools, prompt)
     agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=False)
 
-    ace_agent = ACELangChain(runnable=agent_executor, ace_model="gpt-4o-mini")
+    ace_agent = ACELangChain(
+        runnable=agent_executor, ace_model="claude-sonnet-4-5-20250929"
+    )
     result_agent = ace_agent.invoke({"input": "What is 5 * 6?"})
     print(f"Result: {result_agent}")
     print(f"Strategies learned: {len(ace_agent.playbook.bullets())}")
@@ -215,11 +221,11 @@ async def example_async_agent():
     print("Example 3: Async AgentExecutor")
     print("=" * 60)
 
-    if not os.getenv("OPENAI_API_KEY"):
-        print("Please set OPENAI_API_KEY in your .env file")
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        print("Please set ANTHROPIC_API_KEY in your .env file")
         return
 
-    llm = ChatOpenAI(temperature=0, model="gpt-4o-mini")
+    llm = ChatAnthropic(temperature=0, model="claude-sonnet-4-5-20250929")
     tools = [add, multiply, get_word_length]
 
     prompt = ChatPromptTemplate.from_messages(
@@ -233,7 +239,9 @@ async def example_async_agent():
     agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=False)
 
     # Wrap with ACE
-    ace_agent = ACELangChain(runnable=agent_executor, ace_model="gpt-4o-mini")
+    ace_agent = ACELangChain(
+        runnable=agent_executor, ace_model="claude-sonnet-4-5-20250929"
+    )
 
     # Async execution with meso-level learning
     questions = [
@@ -264,7 +272,7 @@ def main():
     # Run async example
     import asyncio
 
-    if os.getenv("OPENAI_API_KEY"):
+    if os.getenv("ANTHROPIC_API_KEY"):
         asyncio.run(example_async_agent())
 
     print("\n" + "=" * 60)

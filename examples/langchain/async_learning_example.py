@@ -7,7 +7,7 @@ Demonstrates async learning with ACELangChain:
 - Shows async invoke with background learning
 - Learning happens in thread pool (doesn't block event loop)
 
-Requires: pip install langchain-openai
+Requires: pip install langchain-anthropic
 """
 
 import asyncio
@@ -19,7 +19,7 @@ load_dotenv()
 
 # Check for LangChain
 try:
-    from langchain_openai import ChatOpenAI
+    from langchain_anthropic import ChatAnthropic
     from langchain_core.prompts import ChatPromptTemplate
     from langchain_core.output_parsers import StrOutputParser
 
@@ -37,7 +37,7 @@ async def run_async_langchain():
     print("=" * 60)
 
     # Create a simple LangChain chain
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    llm = ChatAnthropic(model="claude-sonnet-4-5-20250929", temperature=0)
     prompt = ChatPromptTemplate.from_template(
         "Answer this question concisely: {question}"
     )
@@ -46,7 +46,7 @@ async def run_async_langchain():
     # Wrap with ACE for learning
     ace_chain = ACELangChain(
         runnable=chain,
-        ace_model="gpt-4o-mini",
+        ace_model="claude-sonnet-4-5-20250929",
         async_learning=True,  # Learning in background!
     )
 
@@ -126,7 +126,7 @@ async def run_sync_langchain():
     print("=" * 60)
 
     # Create a simple LangChain chain
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    llm = ChatAnthropic(model="claude-sonnet-4-5-20250929", temperature=0)
     prompt = ChatPromptTemplate.from_template(
         "Answer this question concisely: {question}"
     )
@@ -135,7 +135,7 @@ async def run_sync_langchain():
     # Wrap with ACE - sync mode
     ace_chain = ACELangChain(
         runnable=chain,
-        ace_model="gpt-4o-mini",
+        ace_model="claude-sonnet-4-5-20250929",
         async_learning=False,  # Blocking mode
     )
 
@@ -171,12 +171,12 @@ async def run_sync_langchain():
 
 
 async def main():
-    if not os.getenv("OPENAI_API_KEY"):
-        print("Please set OPENAI_API_KEY in your .env file")
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        print("Please set ANTHROPIC_API_KEY in your .env file")
         return
 
     if not LANGCHAIN_AVAILABLE:
-        print("LangChain not installed. Run: pip install langchain-openai")
+        print("LangChain not installed. Run: pip install langchain-anthropic")
         return
 
     print("=" * 60)

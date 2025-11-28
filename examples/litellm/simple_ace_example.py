@@ -16,12 +16,12 @@ load_dotenv()
 
 def main():
     # Check for API key
-    if not os.getenv("OPENAI_API_KEY"):
-        print("Please set OPENAI_API_KEY in your .env file")
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        print("Please set ANTHROPIC_API_KEY in your .env file")
         return
 
     # 1. Create ACE agent (bundles all components with v2.1 prompts)
-    agent = ACELiteLLM(model="gpt-4o-mini")
+    agent = ACELiteLLM(model="claude-sonnet-4-5-20250929")
 
     # 2. Create training samples
     samples = [

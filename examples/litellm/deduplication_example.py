@@ -25,7 +25,7 @@ def run_without_dedup():
     print("WITHOUT DEDUPLICATION (baseline)")
     print("=" * 60)
 
-    agent = ACELiteLLM(model="gpt-4o-mini")
+    agent = ACELiteLLM(model="claude-sonnet-4-5-20250929")
 
     # Similar questions that will likely create similar bullets
     samples = [
@@ -87,7 +87,7 @@ def run_with_dedup():
     )
 
     agent = ACELiteLLM(
-        model="gpt-4o-mini",
+        model="claude-sonnet-4-5-20250929",
         dedup_config=dedup_config,  # Enable deduplication!
     )
 
@@ -139,8 +139,8 @@ def run_with_dedup():
 
 
 def main():
-    if not os.getenv("OPENAI_API_KEY"):
-        print("Please set OPENAI_API_KEY in your .env file")
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        print("Please set ANTHROPIC_API_KEY in your .env file")
         return
 
     print("=" * 60)
