@@ -73,13 +73,13 @@ The Reflector can analyze execution at three different levels of scope, producin
 
 | Level | Scope | What's Analyzed | Learning Quality |
 |-------|-------|-----------------|------------------|
-| **Micro** | Single interaction | Request → response → feedback | Fast, basic patterns |
-| **Meso** | Full agent run | Multiple steps with reasoning traces | Rich, nuanced strategies |
+| **Micro** | Single interaction + environment | Request → response → ground truth/feedback | Learns from correctness |
+| **Meso** | Full agent run | Reasoning traces (thoughts, tool calls, observations) | Learns from execution patterns |
 | **Macro** | Cross-run analysis | Patterns across multiple executions | Comprehensive (future) |
 
-**Micro-level insights** come from single request/response cycles. Good for simple tasks but limited context.
+**Micro-level insights** come from the full ACE adaptation loop with environment feedback and ground truth. The Reflector knows whether the answer was correct and learns from that evaluation. Used by OfflineAdapter and OnlineAdapter.
 
-**Meso-level insights** come from full agent runs with intermediate steps—including the agent's thoughts, tool calls, and observations. This produces the richest learning because the Reflector sees the full reasoning trace, not just the final answer.
+**Meso-level insights** come from full agent runs with intermediate steps—the agent's thoughts, tool calls, and observations—but without external ground truth. The Reflector learns from the execution patterns themselves. Used by integration wrappers like ACELangChain with AgentExecutor.
 
 **Macro-level insights** (future) will compare patterns across multiple runs to identify systemic improvements.
 
