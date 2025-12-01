@@ -39,7 +39,7 @@ Example:
     agent = ACELiteLLM(model="gpt-4o-mini", playbook_path="my_agent.json")
 """
 
-from typing import TYPE_CHECKING, List, Optional, Dict, Any, Tuple
+from typing import TYPE_CHECKING, List, Optional, Dict, Any, Tuple, Union
 
 from ..playbook import Playbook
 from ..roles import Generator, Reflector, Curator, GeneratorOutput
@@ -103,9 +103,18 @@ class ACELiteLLM:
         model: str = "gpt-4o-mini",
         max_tokens: int = 2048,
         temperature: float = 0.0,
+        # Authentication & endpoint (Issue #33)
+        api_key: Optional[str] = None,
+        base_url: Optional[str] = None,
+        # HTTP/SSL settings (Issue #33)
+        extra_headers: Optional[Dict[str, str]] = None,
+        ssl_verify: Optional[Union[bool, str]] = None,
+        # ACE-specific settings
         playbook_path: Optional[str] = None,
         is_learning: bool = True,
         dedup_config: Optional["DeduplicationConfig"] = None,
+        # Pass-through for advanced LiteLLM options
+        **llm_kwargs: Any,
     ):
         """
         Initialize ACELiteLLM agent.
@@ -115,9 +124,14 @@ class ACELiteLLM:
                    Supports 100+ providers: OpenAI, Anthropic, Google, etc.
             max_tokens: Max tokens for responses (default: 2048)
             temperature: Sampling temperature (default: 0.0)
+            api_key: API key for the LLM provider. Falls back to env vars if not set.
+            base_url: Custom API endpoint URL (e.g., http://localhost:1234/v1)
+            extra_headers: Custom HTTP headers dict (e.g., {"X-Tenant-ID": "abc"})
+            ssl_verify: SSL verification. False to disable, or path to CA bundle.
             playbook_path: Path to existing playbook (optional)
             is_learning: Enable/disable learning (default: True)
             dedup_config: Optional DeduplicationConfig for bullet deduplication
+            **llm_kwargs: Additional LiteLLM parameters (timeout, max_retries, etc.)
 
         Raises:
             ImportError: If LiteLLM is not installed
@@ -131,6 +145,23 @@ class ACELiteLLM:
 
             # Google
             agent = ACELiteLLM(model="gemini/gemini-pro")
+
+            # With explicit API key (Issue #33)
+            agent = ACELiteLLM(model="gpt-4", api_key="sk-...")
+
+            # Custom endpoint - LM Studio, Ollama (Issue #33)
+            agent = ACELiteLLM(
+                model="openai/local-model",
+                base_url="http://localhost:1234/v1"
+            )
+
+            # Enterprise with custom headers and SSL (Issue #33)
+            agent = ACELiteLLM(
+                model="gpt-4",
+                base_url="https://proxy.company.com/v1",
+                extra_headers={"X-Tenant-ID": "team-alpha"},
+                ssl_verify="/path/to/internal-ca.pem"
+            )
 
             # With existing playbook
             agent = ACELiteLLM(
@@ -165,9 +196,16 @@ class ACELiteLLM:
         else:
             self.playbook = Playbook()
 
-        # Create LLM client
+        # Create LLM client with configuration (Issue #33)
         self.llm = LiteLLMClient(
-            model=model, max_tokens=max_tokens, temperature=temperature
+            model=model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            api_key=api_key,
+            api_base=base_url,  # Map user-friendly name to LiteLLM's api_base
+            extra_headers=extra_headers,
+            ssl_verify=ssl_verify,
+            **llm_kwargs,
         )
 
         # Create ACE components with v2.1 prompts
