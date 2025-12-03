@@ -10,14 +10,28 @@ Example:
     agent = ACEClaudeCode(working_dir="./my_project")
     result = agent.run(task="Refactor the auth module")
     agent.save_playbook("learned.json")
+
+    # With async learning
+    agent = ACEClaudeCode(working_dir="./project", async_learning=True)
+    result = agent.run(task="Task 1")  # Returns immediately
+    agent.wait_for_learning()  # Wait for learning to complete
+
+    # With deduplication
+    from ace import DeduplicationConfig
+    agent = ACEClaudeCode(
+        working_dir="./project",
+        dedup_config=DeduplicationConfig(similarity_threshold=0.85)
+    )
 """
 
 import subprocess
 import shutil
 import json
 import os
+import queue
+import threading
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
 from dataclasses import dataclass
 
 from ..llm_providers import LiteLLMClient
@@ -25,6 +39,9 @@ from ..playbook import Playbook
 from ..roles import Reflector, Curator, GeneratorOutput
 from ..prompts_v2_1 import PromptManager
 from .base import wrap_playbook_context
+
+if TYPE_CHECKING:
+    from ..deduplication import DeduplicationConfig, DeduplicationManager
 
 
 # Check if claude CLI is available
@@ -81,6 +98,9 @@ class ACEClaudeCode:
         playbook_path: Optional[str] = None,
         is_learning: bool = True,
         timeout: int = 600,
+        async_learning: bool = False,
+        max_reflector_workers: int = 3,
+        dedup_config: Optional["DeduplicationConfig"] = None,
     ):
         """
         Initialize ACEClaudeCode.
@@ -94,6 +114,9 @@ class ACEClaudeCode:
             playbook_path: Path to load playbook from
             is_learning: Enable/disable ACE learning
             timeout: Execution timeout in seconds (default: 600)
+            async_learning: Run learning in background (default: False)
+            max_reflector_workers: Parallel Reflector threads (default: 3)
+            dedup_config: Optional DeduplicationConfig for bullet deduplication
         """
         if not CLAUDE_CODE_AVAILABLE:
             raise RuntimeError(
@@ -104,6 +127,9 @@ class ACEClaudeCode:
         self.working_dir.mkdir(parents=True, exist_ok=True)
         self.is_learning = is_learning
         self.timeout = timeout
+        self.async_learning = async_learning
+        self.max_reflector_workers = max_reflector_workers
+        self.dedup_config = dedup_config
 
         # Load or create playbook
         if playbook_path:
@@ -126,6 +152,25 @@ class ACEClaudeCode:
         self.curator = Curator(
             self.ace_llm, prompt_template=prompt_mgr.get_curator_prompt()
         )
+
+        # Initialize deduplication manager if config provided
+        self._dedup_manager: Optional["DeduplicationManager"] = None
+        if dedup_config:
+            from ..deduplication import DeduplicationManager
+
+            self._dedup_manager = DeduplicationManager(dedup_config)
+
+        # Async learning state
+        self._learning_queue: queue.Queue = queue.Queue()
+        self._learning_thread: Optional[threading.Thread] = None
+        self._stop_learning = threading.Event()
+        self._tasks_submitted = 0
+        self._tasks_completed = 0
+        self._lock = threading.Lock()
+
+        # Start async learning thread if enabled
+        if async_learning:
+            self._start_async_learning()
 
     def run(self, task: str, context: str = "") -> ClaudeCodeResult:
         """
@@ -154,7 +199,14 @@ class ACEClaudeCode:
 
         # 3. LEARN: Run ACE learning if enabled
         if self.is_learning:
-            self._learn_from_execution(task, result)
+            if self.async_learning:
+                # Queue learning task for background processing
+                with self._lock:
+                    self._tasks_submitted += 1
+                self._learning_queue.put((task, result))
+            else:
+                # Synchronous learning
+                self._learn_from_execution(task, result)
 
         return result
 
@@ -303,16 +355,28 @@ class ACEClaudeCode:
             feedback=feedback,
         )
 
-        # Run Curator
+        # Get similarity report for Curator if deduplication enabled
+        similarity_report = None
+        if self._dedup_manager:
+            similarity_report = self._dedup_manager.get_similarity_report(self.playbook)
+
+        # Run Curator (with similarity report if available)
         curator_output = self.curator.curate(
             reflection=reflection,
             playbook=self.playbook,
             question_context=f"task: {task}",
             progress=f"Claude Code: {task}",
+            similarity_report=similarity_report,
         )
 
-        # Update playbook
+        # Update playbook with delta operations
         self.playbook.apply_delta(curator_output.delta)
+
+        # Apply consolidation operations if deduplication enabled
+        if self._dedup_manager and curator_output.raw:
+            self._dedup_manager.apply_operations_from_response(
+                curator_output.raw, self.playbook
+            )
 
     def save_playbook(self, path: str):
         """Save learned playbook to file."""
@@ -335,6 +399,127 @@ class ACEClaudeCode:
     def disable_learning(self):
         """Disable ACE learning (execution only)."""
         self.is_learning = False
+
+    def _start_async_learning(self):
+        """Start the background learning thread."""
+        if self._learning_thread is not None and self._learning_thread.is_alive():
+            return
+
+        self._stop_learning.clear()
+        self._learning_thread = threading.Thread(
+            target=self._learning_worker, daemon=True
+        )
+        self._learning_thread.start()
+
+    def _learning_worker(self):
+        """Background worker that processes learning tasks."""
+        while not self._stop_learning.is_set():
+            try:
+                # Wait for a task with timeout to allow checking stop flag
+                task, result = self._learning_queue.get(timeout=0.5)
+            except queue.Empty:
+                continue
+
+            try:
+                # Process learning
+                self._learn_from_execution(task, result)
+            finally:
+                with self._lock:
+                    self._tasks_completed += 1
+                self._learning_queue.task_done()
+
+    def wait_for_learning(self, timeout: Optional[float] = None) -> bool:
+        """
+        Wait for async learning to complete.
+
+        Args:
+            timeout: Maximum seconds to wait (None = wait forever)
+
+        Returns:
+            True if all learning completed, False if timeout reached
+
+        Example:
+            agent = ACEClaudeCode(working_dir="./project", async_learning=True)
+            agent.run(task="Task 1")
+            agent.run(task="Task 2")
+            success = agent.wait_for_learning(timeout=60.0)
+        """
+        if not self.async_learning:
+            return True
+
+        try:
+            # Use join with timeout if provided
+            if timeout is not None:
+                import time
+
+                start = time.time()
+                while not self._learning_queue.empty():
+                    elapsed = time.time() - start
+                    if elapsed >= timeout:
+                        return False
+                    time.sleep(0.1)
+                return True
+            else:
+                self._learning_queue.join()
+                return True
+        except Exception:
+            return False
+
+    def stop_async_learning(self, wait: bool = True):
+        """
+        Stop async learning pipeline.
+
+        Args:
+            wait: If True, wait for current tasks to complete (default: True)
+
+        Example:
+            agent.stop_async_learning()
+        """
+        if not self.async_learning:
+            return
+
+        if wait:
+            self.wait_for_learning()
+
+        self._stop_learning.set()
+        if self._learning_thread and self._learning_thread.is_alive():
+            self._learning_thread.join(timeout=5.0)
+
+    @property
+    def learning_stats(self) -> Dict[str, Any]:
+        """
+        Get async learning statistics.
+
+        Returns:
+            Dictionary with learning progress info:
+            - async_learning: Whether async mode is enabled
+            - tasks_submitted: Total tasks queued
+            - tasks_completed: Tasks finished processing
+            - pending: Tasks still being processed
+            - queue_size: Tasks waiting in queue
+
+        Example:
+            stats = agent.learning_stats
+            print(f"Pending: {stats['pending']}")
+        """
+        with self._lock:
+            submitted = self._tasks_submitted
+            completed = self._tasks_completed
+
+        return {
+            "async_learning": self.async_learning,
+            "tasks_submitted": submitted,
+            "tasks_completed": completed,
+            "pending": submitted - completed,
+            "queue_size": self._learning_queue.qsize(),
+        }
+
+    def __del__(self):
+        """Cleanup async learning resources on deletion."""
+        try:
+            self.stop_async_learning(wait=False)
+        except Exception:
+            pass
 
 
 __all__ = ["ACEClaudeCode", "ClaudeCodeResult", "CLAUDE_CODE_AVAILABLE"]
