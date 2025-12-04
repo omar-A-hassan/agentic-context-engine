@@ -1,4 +1,4 @@
-# Agent Prompt Optimizer (Example)
+# Agent Prompt Optimizer
 
 ![GitHub stars](https://img.shields.io/github/stars/kayba-ai/agentic-context-engine?style=social)
 [![Discord](https://img.shields.io/discord/1429935408145236131?label=Discord&logo=discord&logoColor=white&color=5865F2)](https://discord.gg/mqCqH7sTyK)
