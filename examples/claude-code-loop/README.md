@@ -41,14 +41,13 @@ cd agentic-context-engine/examples/claude-code-loop
 ### 2. Install
 
 ```bash
-pip install ace-framework
+uv pip install ace-framework
 ```
 
 ### 3. Setup
 
 ```bash
-cp .env.example .env
-# Add your ANTHROPIC_API_KEY to .env
+# Add your ANTHROPIC_API_KEY to .env.ace
 ./reset_workspace.sh  # Initialize workspace
 ```
 
@@ -61,12 +60,12 @@ Edit `prompt.md` with your task (see [Prompt Tips](#-prompt-tips) for guidance).
 ### 5. Run
 
 ```bash
-python ace_loop.py
+uv run python ace_loop.py
 ```
 
 Claude Code starts working in `workspace/` and learned skills get stored in `skillbook/`.
 
-You can stop anytime with `Ctrl+C` and resume later with `python ace_loop.py` - it picks up where it left off. We recommend leaving it running until stall detection kicks in (no new commits for 4 iterations) or you're happy with the result.
+You can stop anytime with `Ctrl+C` and resume later with `uv run python ace_loop.py` - it picks up where it left off. We recommend leaving it running until stall detection kicks in (no new commits for 4 iterations) or you're happy with the result.
 
 ### 6. Reset
 
@@ -80,7 +79,7 @@ Run this when starting a new task or trying a different prompt (workspace and sk
 
 ## 💳 What You Need
 
-- **Claude Code:** Claude subscription (Max plan with Opus 4.5 recommended - tokens won't run out). On cheaper plans, if you hit your limit just resume later with `python ace_loop.py`
+- **Claude Code:** Claude subscription (Max plan with Opus 4.5 recommended - tokens won't run out). On cheaper plans, if you hit your limit just resume later with `uv run python ace_loop.py`
 - **Learning loop:** Anthropic API key (~$0.01-0.05 per iteration with Sonnet 4.5)
 
 ---
@@ -131,6 +130,7 @@ Each iteration builds on previous work. Skills compound over time.
 
 | File                  | What it does                              |
 | --------------------- | ----------------------------------------- |
+| `.env.ace`            | Your API key (edit this)                  |
 | `prompt.md`           | Your task (edit this)                     |
 | `ace_loop.py`         | Main loop script                          |
 | `workspace_template/` | Your codebase + .env (copied on reset)    |
@@ -142,9 +142,10 @@ Each iteration builds on previous work. Skills compound over time.
 
 ## ⚙️ Environment Variables
 
-Set in `.env` file:
+Set in `.env.ace` file:
 
-| Variable    | Description                                                               |
-| ----------- | ------------------------------------------------------------------------- |
-| `AUTO_MODE` | `true` (default) runs fully automatic, `false` prompts between iterations |
-| `ACE_MODEL` | Model for learning (default: claude-sonnet-4-5)                           |
+| Variable            | Description                                                               |
+| ------------------- | ------------------------------------------------------------------------- |
+| `ANTHROPIC_API_KEY` | Required: API key for ACE learning model                                  |
+| `AUTO_MODE`         | `true` (default) runs fully automatic, `false` prompts between iterations |
+| `ACE_MODEL`         | Model for learning (default: claude-sonnet-4-5-20250929)                  |
