@@ -21,7 +21,7 @@ DATA_DIR = Path(os.getenv("ACE_DEMO_DATA_DIR", str(DEMO_DIR / ".data")))
 
 
 def run_reset_workspace():
-    """Reset workspace (keeps playbook)."""
+    """Reset workspace (keeps skillbook)."""
     print("\n" + "=" * 70)
     print("🔄 Resetting workspace...")
     print("=" * 70 + "\n")
@@ -71,14 +71,14 @@ def main():
     print("🧪 ACE 2-RUN LEARNING EXPERIMENT")
     print("=" * 70)
     print("\nThis will run ACE 2 times on the same Python→TypeScript task.")
-    print("Each run uses the playbook from previous runs.")
+    print("Each run uses the skillbook from previous runs.")
     print("All metrics logged to .data/runs.json")
     print("\nStarting experiment...\n")
 
     total_start = time.time()
 
     for run_num in range(1, 3):
-        # Reset workspace (keeps playbook)
+        # Reset workspace (keeps skillbook)
         run_reset_workspace()
 
         # Run ACE loop

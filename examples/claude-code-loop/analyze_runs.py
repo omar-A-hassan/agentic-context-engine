@@ -47,7 +47,7 @@ def print_runs_table(runs):
     for i, run in enumerate(runs, 1):
         tasks = run.get("task_count", 0)
         failures = run.get("total_failures", 0)
-        strategies = run.get("playbook_strategies", 0)
+        strategies = run.get("skillbook_strategies", 0)
         success = "✅ Yes" if run.get("success", False) else "❌ No"
 
         print(f"{i:<6} {tasks:<10} {failures:<12} {strategies:<12} {success:<10}")
@@ -86,11 +86,11 @@ def print_improvement_summary(runs):
     print()
 
     # Strategies comparison
-    first_strategies = first.get("playbook_strategies", 0)
-    last_strategies = last.get("playbook_strategies", 0)
+    first_strategies = first.get("skillbook_strategies", 0)
+    last_strategies = last.get("skillbook_strategies", 0)
     strategy_growth = last_strategies - first_strategies
 
-    print("Playbook Strategies:")
+    print("Skillbook Strategies:")
     print(f"  Run 1: {first_strategies}")
     print(f"  Run {len(runs)}: {last_strategies}")
     if strategy_growth > 0:
@@ -120,7 +120,7 @@ def print_detailed_runs(runs):
         print(f"  Timestamp: {run.get('timestamp', 'N/A')}")
         print(f"  Tasks: {run.get('task_count', 0)}")
         print(f"  Validation Failures: {run.get('total_failures', 0)}")
-        print(f"  Playbook Strategies: {run.get('playbook_strategies', 0)}")
+        print(f"  Skillbook Strategies: {run.get('skillbook_strategies', 0)}")
         print(f"  Success: {'✅ Yes' if run.get('success', False) else '❌ No'}")
 
         if "error" in run:
@@ -155,7 +155,7 @@ def main():
     print("=" * 70)
     print()
     print("ACE replaces manual prompt engineering with automatic learning.")
-    print("Each run improves the playbook, reducing failures and increasing success.")
+    print("Each run improves the skillbook, reducing failures and increasing success.")
     print()
 
 

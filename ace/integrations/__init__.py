@@ -39,7 +39,7 @@ Example:
     from ace.integrations import ACEClaudeCode
     agent = ACEClaudeCode(working_dir="./my_project")
     result = agent.run(task="Add unit tests")
-    agent.save_playbook("learned.json")
+    agent.save_skillbook("learned.json")
 """
 
 from .base import wrap_skillbook_context
