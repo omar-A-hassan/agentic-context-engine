@@ -87,6 +87,7 @@ agent2 = ACELiteLLM.from_skillbook("my_agent.json", model="gpt-4o-mini")
 ```
 
 </details>
+<br>
 
 ### 2. **ACELangChain** - Wrap ACE Around Your Existing Agent ⛓️
 
@@ -105,6 +106,7 @@ result = ace_chain.invoke({"question": "Your task"})  # Learns automatically
 ```
 
 </details>
+<br>
 
 ### 3. **ACEAgent** - Enhance Browser-Use Agent with Self-Optimizing 🌐
 
@@ -139,6 +141,7 @@ await agent.run(task="New task")  # Starts smart!
 ```
 
 </details>
+<br>
 
 ### 4. **ACEClaudeCode** - Claude Code CLI 💻
 
