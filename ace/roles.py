@@ -249,8 +249,8 @@ class Agent:
             context=_format_optional(context),
         )
 
-        # Filter out non-LLM kwargs (like 'sample' used for ReplayAgent)
-        llm_kwargs = {k: v for k, v in kwargs.items() if k != "sample"}
+        # Filter out non-LLM kwargs (like 'sample' for ReplayAgent, 'traces' for RR)
+        llm_kwargs = {k: v for k, v in kwargs.items() if k not in ("sample", "traces")}
 
         # Use Instructor for automatic validation (always available - core dependency)
         output = self.llm.complete_structured(base_prompt, AgentOutput, **llm_kwargs)
@@ -704,8 +704,8 @@ class Reflector:
             skillbook_excerpt=skillbook_context,
         )
 
-        # Filter out non-LLM kwargs (like 'sample' used for ReplayAgent)
-        llm_kwargs = {k: v for k, v in kwargs.items() if k != "sample"}
+        # Filter out non-LLM kwargs (like 'sample' for ReplayAgent, 'traces' for RR)
+        llm_kwargs = {k: v for k, v in kwargs.items() if k not in ("sample", "traces")}
 
         # Use Instructor for automatic validation (always available - core dependency)
         return self.llm.complete_structured(base_prompt, ReflectorOutput, **llm_kwargs)
@@ -893,8 +893,8 @@ class SkillManager:
         if similarity_report:
             base_prompt = base_prompt + "\n\n" + similarity_report
 
-        # Filter out non-LLM kwargs (like 'sample' used for ReplayAgent)
-        llm_kwargs = {k: v for k, v in kwargs.items() if k != "sample"}
+        # Filter out non-LLM kwargs (like 'sample' for ReplayAgent, 'traces' for RR)
+        llm_kwargs = {k: v for k, v in kwargs.items() if k not in ("sample", "traces")}
 
         # Use Instructor for automatic validation (always available - core dependency)
         output = self.llm.complete_structured(
