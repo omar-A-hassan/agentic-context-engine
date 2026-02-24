@@ -6,7 +6,6 @@ import pytest
 
 from pipeline import SampleResult, StepContext, StepProtocol
 
-
 # ---------------------------------------------------------------------------
 # Helper objects
 # ---------------------------------------------------------------------------

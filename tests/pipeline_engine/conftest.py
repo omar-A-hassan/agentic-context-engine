@@ -15,7 +15,6 @@ import pytest
 
 from pipeline import StepContext
 
-
 # ---------------------------------------------------------------------------
 # Reusable dummy step classes (no ACE knowledge)
 # ---------------------------------------------------------------------------
