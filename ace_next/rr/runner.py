@@ -111,17 +111,20 @@ class RRStep(SubRunner):
         messages = rr_ctx.messages + rr_ctx.feedback_messages
         return RRIterationContext(messages=messages, iteration=rr_ctx.iteration + 1)
 
-    def _on_timeout(self, last_ctx: StepContext, iteration: int) -> Any:
-        """Return the stashed timeout output (set by reflect())."""
-        # The timeout output is built by reflect() which has access to
-        # the original call arguments.  We stash it via _timeout_args.
+    def _on_timeout(self, last_ctx: StepContext, iteration: int, **kwargs: Any) -> Any:
+        """Build a fallback ReflectorOutput when max iterations is reached.
+
+        Timeout args are passed through ``run_loop(**kwargs)`` — no
+        instance-level stashing required, eliminating the race condition
+        when ``run_loop`` is called directly or concurrently.
+        """
         logger.warning("Max iterations (%d) reached", self.max_iterations)
-        args = self._timeout_args
+        args = kwargs.get("timeout_args", {})
         return self._build_timeout_output(
-            args["question"],
-            args["agent_output"],
-            args["ground_truth"],
-            args["feedback"],
+            args.get("question", ""),
+            args.get("agent_output"),
+            args.get("ground_truth"),
+            args.get("feedback"),
             args.get("messages"),
         )
 
@@ -177,8 +180,7 @@ class RRStep(SubRunner):
         budget = CallBudget(self.config.max_llm_calls)
         initial_prompt = self._build_initial_prompt(traces, skillbook, trace_obj)
 
-        # Stash timeout args so _on_timeout can build the fallback
-        self._timeout_args: dict[str, Any] = {
+        timeout_args = {
             "question": question,
             "agent_output": agent_output,
             "ground_truth": ground_truth,
@@ -189,6 +191,7 @@ class RRStep(SubRunner):
             sandbox=sandbox,
             budget=budget,
             initial_prompt=initial_prompt,
+            timeout_args=timeout_args,
         )
         return result  # type: ignore[return-value]
 

@@ -63,10 +63,12 @@ class SubRunner(abc.ABC):
     def _accumulate(self, ctx: StepContext) -> StepContext:
         """Build the next iteration's context from the current one."""
 
-    def _on_timeout(self, last_ctx: StepContext, iteration: int) -> Any:
+    def _on_timeout(self, last_ctx: StepContext, iteration: int, **kwargs: Any) -> Any:
         """Called when *max_iterations* is reached without termination.
 
         Default raises ``RuntimeError``.  Override to return a fallback.
+        ``**kwargs`` are forwarded from ``run_loop()`` so subclasses can
+        access call-local state without stashing it on ``self``.
         """
         raise RuntimeError(
             f"SubRunner hit max_iterations ({self.max_iterations}) "
@@ -92,7 +94,7 @@ class SubRunner(abc.ABC):
                 return self._extract_result(ctx)
             ctx = self._accumulate(ctx)
 
-        return self._on_timeout(ctx, self.max_iterations)
+        return self._on_timeout(ctx, self.max_iterations, **kwargs)
 
     # ------------------------------------------------------------------
     # StepProtocol — subclasses typically override __call__ to map

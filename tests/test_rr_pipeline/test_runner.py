@@ -202,6 +202,70 @@ FINAL({
 
 
 @pytest.mark.unit
+class TestRRStepTimeout:
+    """Test _on_timeout kwargs-based fallback (no instance-level stashing)."""
+
+    def test_run_loop_directly_does_not_raise_attribute_error(self):
+        """run_loop() without reflect() must not raise AttributeError.
+
+        Before the fix, _on_timeout read self._timeout_args which was only
+        set by reflect().  Now it reads from **kwargs, so calling run_loop()
+        directly produces a graceful timeout output.
+        """
+        explore = '```python\nprint("exploring")\n```'
+        llm = MockLLM([explore] * 2)
+        rr = RRStep(
+            llm,
+            config=RRConfig(
+                max_iterations=2,
+                enable_subagent=False,
+                enable_fallback_synthesis=False,
+            ),
+        )
+
+        # Call run_loop directly — no reflect() wrapper
+        result = rr.run_loop(
+            sandbox=rr._create_sandbox(None, {"question": "q", "steps": []}, None),
+            budget=__import__(
+                "ace.reflector.subagent", fromlist=["CallBudget"]
+            ).CallBudget(10),
+            initial_prompt="test prompt",
+            timeout_args={
+                "question": "q",
+                "agent_output": None,
+                "ground_truth": None,
+                "feedback": None,
+            },
+        )
+        assert isinstance(result, ReflectorOutput)
+        assert "max iterations" in result.reasoning.lower()
+
+    def test_timeout_without_timeout_args_gives_safe_defaults(self):
+        """If timeout_args kwarg is missing, _on_timeout still works."""
+        explore = '```python\nprint("exploring")\n```'
+        llm = MockLLM([explore])
+        rr = RRStep(
+            llm,
+            config=RRConfig(
+                max_iterations=1,
+                enable_subagent=False,
+                enable_fallback_synthesis=False,
+            ),
+        )
+
+        result = rr.run_loop(
+            sandbox=rr._create_sandbox(None, {"question": "q", "steps": []}, None),
+            budget=__import__(
+                "ace.reflector.subagent", fromlist=["CallBudget"]
+            ).CallBudget(10),
+            initial_prompt="test prompt",
+            # No timeout_args — should use safe defaults
+        )
+        assert isinstance(result, ReflectorOutput)
+        assert "max iterations" in result.reasoning.lower()
+
+
+@pytest.mark.unit
 class TestRRStepBackwardCompat:
     """Ensure RRStep satisfies ReflectorLike protocol."""
 

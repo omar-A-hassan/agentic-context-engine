@@ -104,12 +104,26 @@ class TestSubRunnerTimeout:
         """Subclass can override _on_timeout to return a fallback."""
 
         class GracefulRunner(CounterRunner):
-            def _on_timeout(self, last_ctx, iteration):
+            def _on_timeout(self, last_ctx, iteration, **kwargs):
                 return -1  # sentinel
 
         runner = GracefulRunner(target=100, max_iterations=3)
         result = runner.run_loop()
         assert result == -1
+
+    def test_on_timeout_receives_kwargs_from_run_loop(self):
+        """kwargs passed to run_loop() are forwarded to _on_timeout()."""
+        captured: dict = {}
+
+        class KwargsCapture(CounterRunner):
+            def _on_timeout(self, last_ctx, iteration, **kwargs):
+                captured.update(kwargs)
+                return -1
+
+        runner = KwargsCapture(target=100, max_iterations=2)
+        result = runner.run_loop(foo="bar", baz=42)
+        assert result == -1
+        assert captured == {"foo": "bar", "baz": 42}
 
 
 class TestSubRunnerProtocol:
