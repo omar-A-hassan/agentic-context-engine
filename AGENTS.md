@@ -223,9 +223,10 @@ python scripts/explain_ace_performance.py
   - **Agent**: Produces answers using the current skillbook
   - **Reflector**: Analyzes errors and classifies skill contributions
   - **SkillManager**: Emits update operations to update the skillbook
-- **Two Architecture Patterns**:
+- **Three Architecture Patterns**:
   - **Full ACE Pipeline**: Agent+Reflector+SkillManager (for new agents)
   - **Integration Pattern**: Reflector+SkillManager only (for existing systems like browser-use, LangChain)
+  - **SubRunner Pattern**: A step that wraps an internal Pipeline + loop. Runs the inner pipeline once per iteration until termination. Exposes itself as a StepProtocol step. Example: `RRStep` — the Recursive Reflector's REPL loop.
 
 ### Insight Levels (Reflector Scope)
 
@@ -263,6 +264,7 @@ The ACE framework operates at three insight levels based on what scope the Refle
   - `langchain.py`: ACELangChain - wrap LangChain chains/agents
   - `litellm.py`: ACELiteLLM - simple conversational agent
 - `deduplication/`: Skill deduplication (similarity detection, consolidation)
+- `rr/`: Recursive Reflector as pipeline (SubRunner pattern) — `RRStep`, inner steps (`LLMCallStep`, `ExtractCodeStep`, `SandboxExecStep`, `CheckResultStep`)
 
 **ace/observability/** - Production monitoring and observability:
 - `opik_integration.py`: Enterprise-grade monitoring with Opik
@@ -306,19 +308,26 @@ The ACE framework operates at three insight levels based on what scope the Refle
    - Use when: Wrapping browser-use, LangChain, CrewAI, or custom agents
    - See `ace/integrations/base.py` for detailed explanation
 
-3. **LLM Integration**:
+3. **SubRunner Pattern** (for iterative logic):
+   - A step that wraps an internal Pipeline + loop
+   - Runs the inner pipeline once per iteration until termination, then returns the result
+   - Exposes itself as a StepProtocol step — a black box to the outer pipeline
+   - Extend `SubRunner` from `pipeline/sub_runner.py` and implement 5 template methods
+   - Example: `RRStep` in `ace_next/rr/` — the Recursive Reflector's REPL loop
+
+4. **LLM Integration**:
    - Implement `LLMClient` subclass for your model API
    - LiteLLMClient supports 100+ providers (OpenAI, Anthropic, Google, etc.)
    - LangChainClient provides LangChain integration
    - TransformersLLMClient for local model deployment
    - All roles share the same LLM instance
 
-4. **Task Environment**:
+5. **Task Environment**:
    - Extend `TaskEnvironment` abstract class
    - Implement `evaluate()` to provide execution feedback
    - Return `EnvironmentResult` with feedback and optional ground truth
 
-5. **Observability Integration**:
+6. **Observability Integration**:
    - Automatic tracing with Opik when installed
    - Token usage and cost tracking for all LLM calls
    - Real-time monitoring of Agent, Reflector, and SkillManager interactions
