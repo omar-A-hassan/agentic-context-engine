@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 
 # ── Create agent with Opik enabled ────────────────────────────────
 ace = ACELiteLLM.from_model(
-    "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+    "bedrock/us.anthropic.claude-haiku-4-5-20251001-v1:0",
     opik=True,
     opik_project="ace-litellm-opik-test",
     opik_tags=["e2e", "litellm", "bedrock", "opik-test"],
@@ -48,4 +48,10 @@ for i, r in enumerate(results):
     log.info("Sample %d: %s", i, status)
 log.info("Learned %d skills", len(ace.skillbook.skills()))
 log.info("=" * 60)
+
+# Flush buffered traces before exit
+if ace._opik_step is not None:
+    ace._opik_step.flush()
+    log.info("Opik traces flushed")
+
 log.info("Done. Check https://www.comet.com/opik → project 'ace-litellm-opik-test'")

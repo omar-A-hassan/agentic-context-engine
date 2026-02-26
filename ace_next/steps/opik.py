@@ -113,7 +113,17 @@ class OpikStep:
 
         if self.enabled:
             try:
-                self._client = _opik.Opik(project_name=project_name)
+                # Pass config explicitly from env vars so we never depend
+                # on the global ~/.opik.config file.
+                api_key = os.environ.get("OPIK_API_KEY")
+                workspace = os.environ.get("OPIK_WORKSPACE")
+                host = os.environ.get("OPIK_URL_OVERRIDE")
+                self._client = _opik.Opik(
+                    project_name=project_name,
+                    api_key=api_key or None,
+                    workspace=workspace or None,
+                    host=host or None,
+                )
             except Exception as exc:
                 logger.debug("OpikStep: failed to create Opik client: %s", exc)
                 self.enabled = False

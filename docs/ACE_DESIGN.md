@@ -846,7 +846,11 @@ class OpikStep:
 
 Explicit, opt-in observability step — creates an Opik trace per sample with pipeline metadata, agent output, reflection insights, and skill manager operations. **Does NOT register the LiteLLM callback** — call `register_opik_litellm_callback()` separately if you also want per-LLM-call token/cost tracking. Two independent tracing modes: (1) pipeline step (this class) — client-agnostic, reads `ACEStepContext` fields; (2) LiteLLM callback (`register_opik_litellm_callback`) — LiteLLM-specific, registers `OpikLogger` on `litellm.callbacks`.
 
-Only requires `skillbook` (always present). Reads other context fields (`reflection`, `skill_manager_output`, `trace`, `agent_output`) with guards — they may or may not be populated depending on pipeline shape. Gracefully degrades to a no-op when Opik is not installed or `OPIK_DISABLED=true`.
+Only requires `skillbook` (always present). Reads other context fields (`reflection`, `skill_manager_output`, `trace`, `agent_output`) with guards — they may or may not be populated depending on pipeline shape. When used directly, gracefully degrades to a no-op when Opik is not installed or `OPIK_DISABLED=true`. When used via `ACELiteLLM(opik=True)`, **fails loudly** — raises `ImportError` if the package is missing, `RuntimeError` if client init fails.
+
+Passes `OPIK_API_KEY`, `OPIK_WORKSPACE`, and `OPIK_URL_OVERRIDE` explicitly from environment variables — does **not** depend on the global `~/.opik.config` file.
+
+Call `flush()` after the pipeline finishes to drain buffered traces before the process exits (the Opik client batches sends asynchronously).
 
 **Not wired into `learning_tail()`.** Users append it via `extra_steps` on `from_roles()`, or manually after calling `learning_tail()`:
 

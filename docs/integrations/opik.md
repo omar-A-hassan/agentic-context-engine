@@ -133,9 +133,16 @@ When using `ACELiteLLM` with `opik=True`, both modes are enabled together automa
 | `OPIK_URL_OVERRIDE` | Custom Opik server URL | `http://localhost:5173/api` |
 | `OPIK_WORKSPACE` | Opik workspace name | `default` |
 
-## Graceful Degradation
+## Error Handling
 
-`OpikStep` soft-imports Opik. If the package is not installed or tracing is disabled via environment variables, the step silently becomes a no-op — no errors, no traces, no performance impact.
+When using `ACELiteLLM` with `opik=True`, errors are **raised immediately**:
+
+- `ImportError` if the `opik` package is not installed
+- `RuntimeError` if the Opik client fails to initialize (bad config, disabled via env vars)
+
+This ensures you know immediately if tracing is broken, rather than discovering missing traces later.
+
+When using `OpikStep` directly via `extra_steps`, it soft-imports Opik and silently becomes a no-op if the package is absent — useful for pipelines that should work with or without observability.
 
 ```python
 from ace_next import OPIK_AVAILABLE
@@ -143,6 +150,30 @@ from ace_next import OPIK_AVAILABLE
 if OPIK_AVAILABLE:
     print("Opik tracing is available")
 ```
+
+## Troubleshooting: `~/.opik.config`
+
+The Opik SDK stores a global config file at `~/.opik.config` (created by `opik.configure()`). This file **overrides environment variables** and can cause silent failures if it contains stale settings.
+
+If traces aren't appearing, check:
+
+```bash
+cat ~/.opik.config
+```
+
+A correct config for Comet Cloud looks like:
+
+```ini
+[opik]
+url_override = https://www.comet.com/opik/api/
+workspace = your-workspace-name
+```
+
+Common issues:
+
+- **Wrong URL**: `https://www.comet.com/api/` (missing `/opik/`) causes 404 errors
+- **Wrong workspace**: `workspace = default` instead of your actual workspace name
+- **Stale config**: Re-run `opik.configure()` or edit the file directly to fix
 
 ## Disabling Tracing
 

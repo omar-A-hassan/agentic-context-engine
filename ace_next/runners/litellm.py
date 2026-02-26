@@ -101,15 +101,26 @@ class ACELiteLLM:
         self._checkpoint_dir = checkpoint_dir
         self._checkpoint_interval = checkpoint_interval
 
-        # Opik observability (explicit opt-in)
+        # Opik observability (explicit opt-in — fail loudly)
         self._opik_step: Any = None
         if opik:
-            from ..steps.opik import OpikStep, register_opik_litellm_callback
+            from ..steps.opik import OPIK_AVAILABLE, OpikStep, register_opik_litellm_callback
+
+            if not OPIK_AVAILABLE:
+                raise ImportError(
+                    "opik=True requires the 'opik' package. "
+                    "Install it with: pip install ace-framework[observability]"
+                )
 
             self._opik_step = OpikStep(
                 project_name=opik_project,
                 tags=opik_tags,
             )
+            if not self._opik_step.enabled:
+                raise RuntimeError(
+                    "OpikStep failed to initialize. Check your Opik configuration "
+                    "(~/.opik.config, OPIK_API_KEY, OPIK_WORKSPACE env vars)."
+                )
             # Register LiteLLM-level callback for per-call token/cost tracking
             register_opik_litellm_callback(project_name=opik_project)
 
