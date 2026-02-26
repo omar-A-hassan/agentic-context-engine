@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import logging
 import os
+import warnings
 from typing import Any
 
 from ..core.context import ACEStepContext
@@ -67,7 +68,26 @@ def register_opik_litellm_callback(
         import litellm
         from litellm.integrations.opik.opik import OpikLogger
 
-        opik_logger = OpikLogger(project_name=project_name)
+        # OpikLogger.__init__ calls asyncio.create_task() which spews
+        # ERROR logs + RuntimeWarnings when no event loop is running.
+        # Suppress only those specific messages during init.
+        class _AsyncInitFilter(logging.Filter):
+            def filter(self, record: logging.LogRecord) -> bool:
+                return "Asynchronous processing not initialized" not in record.getMessage()
+
+        _ll = logging.getLogger("LiteLLM")
+        _f = _AsyncInitFilter()
+        _ll.addFilter(_f)
+        try:
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore",
+                    message="coroutine.*periodic_flush.*never awaited",
+                    category=RuntimeWarning,
+                )
+                opik_logger = OpikLogger(project_name=project_name)
+        finally:
+            _ll.removeFilter(_f)
         already = any(
             isinstance(cb, OpikLogger) for cb in getattr(litellm, "callbacks", [])
         )

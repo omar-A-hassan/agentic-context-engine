@@ -49,9 +49,4 @@ for i, r in enumerate(results):
 log.info("Learned %d skills", len(ace.skillbook.skills()))
 log.info("=" * 60)
 
-# Flush buffered traces before exit
-if ace._opik_step is not None:
-    ace._opik_step.flush()
-    log.info("Opik traces flushed")
-
 log.info("Done. Check https://www.comet.com/opik → project 'ace-litellm-opik-test'")
