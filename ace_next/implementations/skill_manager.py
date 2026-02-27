@@ -99,5 +99,5 @@ class SkillManager:
         )
 
         return self.llm.complete_structured(
-            prompt, SkillManagerOutput, max_retries=self.max_retries, **kwargs
+            prompt, SkillManagerOutput, max_retries=self.max_retries
         )
