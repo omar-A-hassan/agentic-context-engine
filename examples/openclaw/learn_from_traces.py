@@ -144,6 +144,11 @@ def main() -> None:
         help="Output directory for skillbook files (default: OPENCLAW_HOME).",
     )
     parser.add_argument(
+        "--opik",
+        action="store_true",
+        help="Enable Opik observability logging.",
+    )
+    parser.add_argument(
         "files",
         nargs="*",
         type=Path,
@@ -229,21 +234,24 @@ def main() -> None:
         api_key=os.getenv("AWS_BEARER_TOKEN_BEDROCK"),
     )
 
-    opik_step = OpikStep(
-        project_name="openclaw-trace-learning",
-        tags=["openclaw", "trace-analyser"],
-    )
-    register_opik_litellm_callback(project_name="openclaw-trace-learning")
-
     output_dir = args.output.expanduser()
     markdown_path = output_dir / "ace_skillbook.md"
     export_md_step = ExportSkillbookMarkdownStep(markdown_path, skillbook)
+
+    extra_steps: list = [export_md_step]
+    if args.opik:
+        opik_step = OpikStep(
+            project_name="openclaw-trace-learning",
+            tags=["openclaw", "trace-analyser"],
+        )
+        register_opik_litellm_callback(project_name="openclaw-trace-learning")
+        extra_steps.append(opik_step)
 
     analyser = TraceAnalyser.from_roles(
         reflector=Reflector(client),
         skill_manager=SkillManager(client),
         skillbook=skillbook,
-        extra_steps=[opik_step, export_md_step],  # type: ignore[arg-type]
+        extra_steps=extra_steps,  # type: ignore[arg-type]
     )
 
     results = analyser.run(traces, epochs=1, wait=True)
