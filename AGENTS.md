@@ -4,6 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Guidelines
 
+### Core Code Protection
+**Do NOT modify core modules (`ace/`, `ace_next/core/`, `pipeline/`) without explicit user approval.** Before proposing any change to these directories:
+1. Read the relevant design docs (`docs/ACE_DESIGN.md`, `docs/PIPELINE_DESIGN.md`) thoroughly.
+2. Evaluate whether the change is truly required or if it can be achieved outside the core (e.g., in an integration, step, or example).
+3. Clearly explain the proposed change and its justification to the user **before** making any edits.
+4. Wait for the user to explicitly accept before proceeding.
+
 ### Documentation Maintenance
 Before working on code in `ace/` or `ace_next/`, read `docs/ACE_DESIGN.md` to understand the current architecture.
 Before working on code in `pipeline/` or `ace_next/core/`, read `docs/PIPELINE_DESIGN.md` to understand the pipeline engine.
